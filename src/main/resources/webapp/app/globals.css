@@ -1,0 +1,35 @@
+@import "tailwindcss";
+
+@theme {
+  --color-wine-50:  #fdf2f5;
+  --color-wine-100: #fbe8ee;
+  --color-wine-200: #f5c6d6;
+  --color-wine-300: #ec94b1;
+  --color-wine-400: #df5e87;
+  --color-wine-500: #c93060;
+  --color-wine-600: #a8224f;
+  --color-wine-700: #8b1842;
+  --color-wine-800: #6b1335;
+  --color-wine-900: #4a0e25;
+  --color-wine-950: #2d0717;
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+:root {
+  --background: #ffffff;
+  --foreground: #0f172a;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
