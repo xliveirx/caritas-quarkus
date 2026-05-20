@@ -1,19 +1,28 @@
 package br.com.caritas.service;
 
-import br.com.caritas.dto.auth.LoginRequestDTO;
-import br.com.caritas.dto.auth.LoginResponseDTO;
+import br.com.caritas.dto.auth.*;
+import br.com.caritas.entity.CoordinatorEntity;
 import br.com.caritas.entity.UserEntity;
+import br.com.caritas.entity.VolunteerEntity;
 import br.com.caritas.exception.AuthException;
+import br.com.caritas.exception.BusinessRuleException;
 import br.com.caritas.exception.ResourceNotFoundException;
 import io.quarkus.elytron.security.common.BcryptUtil;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.UUID;
 
 @ApplicationScoped
 public class AuthService {
 
     @Inject
     private TokenService tokenService;
+
+    @Inject
+    private EmailService emailService;
 
     public LoginResponseDTO login(LoginRequestDTO req) {
 
@@ -32,5 +41,98 @@ public class AuthService {
         String token = this.tokenService.generateToken(user);
 
         return new LoginResponseDTO(token);
+    }
+
+    @Transactional
+    public void setCredentials(CredentialsRequestDTO req) {
+
+        UserEntity user = UserEntity.<UserEntity>find(
+                "email = ?1 and active =?2", req.email(), Boolean.TRUE)
+                        .firstResultOptional()
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                        "User not found.",
+                                        "User not found with email " + req.email()
+                                ));
+
+        if(user.resetToken == null) throw new BusinessRuleException("Invalid token", "The token is invalid or expired");
+
+        if(!BcryptUtil.matches(req.token(), user.resetToken)) {
+            throw new AuthException(
+                    "Invalid token.",
+                    "The token informed is invalid."
+            );
+        }
+
+        if(user.resetTokenExpiresAt.isBefore(LocalDateTime.now())) {
+            throw new AuthException(
+                    "Invalid token.",
+                    "The token has expired."
+            );
+        }
+
+        if(!req.password().equals(req.confirmPassword())) {
+            throw new BusinessRuleException(
+                    "Passwords mismatch.",
+                    "The passwords informed don't match."
+            );
+        }
+
+        user.password = BcryptUtil.bcryptHash(req.password());
+        user.resetToken = null;
+        user.resetTokenExpiresAt = null;
+    }
+
+
+    @Transactional
+    public void resendSetupToken(String email) {
+
+        UserEntity user = UserEntity.<UserEntity>find(
+                        "email = ?1 and active = ?2 and password IS NULL", email, Boolean.TRUE)
+                .firstResultOptional()
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "User not found.",
+                        "User not found with email " + email));
+
+        String token = UUID.randomUUID().toString();
+        user.resetToken = BcryptUtil.bcryptHash(token);
+        user.resetTokenExpiresAt = LocalDateTime.now().plusMinutes(30);
+        user.persist();
+
+        String parishName = resolveParishName(user);
+
+        emailService.sendWelcomeEmail(
+                user.name,
+                user.email,
+                token,
+                parishName);
+    }
+
+    private String resolveParishName(UserEntity user) {
+        return VolunteerEntity.<VolunteerEntity>findByIdOptional(user.id)
+                .map(v -> v.parish.name)
+                .or(() -> CoordinatorEntity.<CoordinatorEntity>findByIdOptional(user.id)
+                        .map(c -> c.parish.name))
+                .orElse("");
+    }
+
+    @Transactional
+    public void forgotPassword(ForgotPasswordRequestDTO req) {
+
+        UserEntity user = UserEntity.<UserEntity>find(
+                        "email = ?1 and active =?2", req.email(), Boolean.TRUE)
+                .firstResultOptional()
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "User not found.",
+                        "User not found with email " + req.email()
+                ));
+
+        String token = UUID.randomUUID().toString();
+        user.resetToken = BcryptUtil.bcryptHash(token);
+        user.resetTokenExpiresAt = LocalDateTime.now().plusSeconds(15);
+
+        this.emailService.sendResetPasswordEmail(
+                user.name,
+                user.email,
+                token);
     }
 }

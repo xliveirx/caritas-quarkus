@@ -24,9 +24,10 @@ public class VolunteerResource {
 
     @GET
     @RolesAllowed({"COORDINATOR", "ADMIN"})
+    @Path("/parish/{parishId}")
     public Response getAllVolunteersByParishId(@QueryParam("page") @DefaultValue("0") int page,
                                                @QueryParam("size") @DefaultValue("10") int size,
-                                               @QueryParam("parishId") Long parishId) {
+                                               @PathParam("parishId") Long parishId) {
 
         var volunteers = this.volunteerService.getAllVolunteersByParishId(page, size, parishId, jwt);
 

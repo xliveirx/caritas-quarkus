@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Caritas Diocese de Caxias do Sul',
+  title: 'Cáritas Diocesana',
   description: 'Plataforma de gestão de voluntários e paróquias da Caritas.',
   icons: {
     icon: '/caritas.png',

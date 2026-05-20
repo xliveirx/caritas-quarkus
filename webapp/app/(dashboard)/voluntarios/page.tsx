@@ -54,7 +54,7 @@ export default function VoluntariosPage() {
       setFetchError(null);
       try {
         const data = await api.get<PaginatedResponse<VolunteerResponse>>(
-          `/api/v1/volunteers?parishId=${parishId}&page=${currentPage}&size=${PAGE_SIZE}`,
+          `/api/v1/volunteers/parish/${parishId}?page=${currentPage}&size=${PAGE_SIZE}`,
           token
         );
         setVolunteers(data.data);

@@ -52,11 +52,11 @@ public class FamilyService {
 
         var groups = jwt.getGroups();
         FamilyEntity family;
-        if(groups.contains(Roles.ADMIN.name())) {
-             family = FamilyEntity.<FamilyEntity>findByIdOptional(id)
+        if (groups.contains(Roles.ADMIN.name())) {
+            family = FamilyEntity.<FamilyEntity>findByIdOptional(id)
                     .orElseThrow(() -> new ResourceNotFoundException(
-                            "Family not found.",
-                            "Family with id " + id + " not found."
+                                    "Family not found.",
+                                    "Family with id " + id + " not found."
                             )
                     );
         } else {
@@ -100,7 +100,7 @@ public class FamilyService {
         family.situation = req.situation();
         family.observation = req.observation();
 
-        if(req.address() != null) {
+        if (req.address() != null) {
             Address address = new Address();
             address.street = req.address().street();
             address.number = req.address().number();
@@ -139,22 +139,20 @@ public class FamilyService {
             FamilyMemberEntity member = new FamilyMemberEntity();
             member.name = m.name();
 
-            if(m.cpf() != null && !CaritasUtil.isCpfValid(m.cpf())) {
+            if (m.cpf() != null && !CaritasUtil.isCpfValid(m.cpf())) {
                 throw new BusinessRuleException(
                         "Invalid CPF.",
                         "The CPF " + m.cpf() + " is not valid.");
-            } else {
-               member.cpf = m.cpf();
             }
+            member.cpf = m.cpf();
 
-            if(m.birthDate() != null && CaritasUtil.isFutureDate(m.birthDate())) {
+            if (m.birthDate() != null && CaritasUtil.isFutureDate(m.birthDate())) {
                 throw new BusinessRuleException(
                         "Invalid birth date.",
                         "Birth date cannot be in the future.");
-            } else {
-                member.birthDate = m.birthDate();
             }
 
+            member.birthDate = m.birthDate();
             member.motherName = m.motherName();
             member.responsible = m.responsible();
             member.family = family;
@@ -204,7 +202,7 @@ public class FamilyService {
         }
 
         if (req.address() != null) {
-            if(family.address == null){
+            if (family.address == null) {
                 family.address = new Address();
             }
 
@@ -237,24 +235,22 @@ public class FamilyService {
                     FamilyMemberEntity member = new FamilyMemberEntity();
                     member.name = m.name();
 
-                    if(CaritasUtil.isCpfValid(m.cpf())) {
-                        member.cpf = m.cpf();
-                    } else {
+                    if (m.cpf() != null && !CaritasUtil.isCpfValid(m.cpf())) {
                         throw new BusinessRuleException(
                                 "Invalid CPF.",
                                 "The CPF " + m.cpf() + " is not valid."
                         );
                     }
+                    member.cpf = m.cpf();
 
-                    if(CaritasUtil.isFutureDate(m.birthDate())){
+                    if (m.birthDate() != null && CaritasUtil.isFutureDate(m.birthDate())) {
                         throw new BusinessRuleException(
                                 "Invalid birth date.",
                                 "Birth date cannot be in the future."
                         );
-                    } else {
-                        member.birthDate = m.birthDate();
-
                     }
+
+                    member.birthDate = m.birthDate();
                     member.motherName = m.motherName();
                     member.responsible = m.responsible();
                     member.family = family;
@@ -267,8 +263,21 @@ public class FamilyService {
                             .findFirst()
                             .ifPresent(member -> {
                                 if (m.name() != null) member.name = m.name();
-                                if (m.cpf() != null && CaritasUtil.isCpfValid(m.cpf())) member.cpf = m.cpf();
-                                if (m.birthDate() != null && !CaritasUtil.isFutureDate(m.birthDate())) member.birthDate = m.birthDate();
+
+                                if (m.cpf() != null && !CaritasUtil.isCpfValid(m.cpf())) {
+                                    throw new BusinessRuleException(
+                                            "Invalid CPF.",
+                                            "The CPF " + m.cpf() + " is not valid."
+                                    );
+                                }
+                                member.cpf = m.cpf();
+                                if (m.birthDate() != null && CaritasUtil.isFutureDate(m.birthDate())) {
+                                    throw new BusinessRuleException(
+                                            "Invalid birth date.",
+                                            "Birth date cannot be in the future."
+                                    );
+                                }
+                                member.birthDate = m.birthDate();
                                 if (m.motherName() != null) member.motherName = m.motherName();
                                 if (m.responsible() != null) member.responsible = m.responsible();
                             });

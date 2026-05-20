@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
-import Image from 'next/image';
+import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/contexts/toast-context';
 import type { ApiErrorResponse } from '@/shared/types/api-error-response';
@@ -136,11 +136,15 @@ export function LoginForm() {
                     className="block text-xs font-semibold tracking-widest text-slate-600 uppercase">
                     Senha
                   </label>
-                  <button type="button"
+                  <Link
+                    href="/forgot-password"
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="text-xs text-wine-700 hover:text-wine-800 font-medium
-                      transition-colors duration-150 focus:outline-none focus-visible:underline">
+                      transition-colors duration-150 focus:outline-none focus-visible:underline"
+                  >
                     Esqueci minha senha
-                  </button>
+                  </Link>
                 </div>
                 <div className="relative">
                   <input

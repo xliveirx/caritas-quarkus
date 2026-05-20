@@ -13,11 +13,18 @@ import br.com.caritas.exception.ResourceNotFoundException;
 import io.quarkus.elytron.security.common.BcryptUtil;
 import io.quarkus.panache.common.Page;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.UUID;
 
 
 @ApplicationScoped
 public class CoordinatorService {
+
+    @Inject
+    private EmailService emailService;
 
     public ApiListDTO getAllCoordinatorsByParish(int page, int size, Long parishId) {
 
@@ -56,16 +63,13 @@ public class CoordinatorService {
                             "E-mail " + req.email() +  " has already been registered");
                 });
 
-        if (!req.password().equals(req.confirmPassword())) {
-            throw new BusinessRuleException(
-                    "Passwords mismatch."
-                    ,"The passwords informed don't match");
-        }
-
         CoordinatorEntity coordinator = new CoordinatorEntity();
         coordinator.name = req.name();
         coordinator.email = req.email();
-        coordinator.password = BcryptUtil.bcryptHash(req.password());
+
+        String token = UUID.randomUUID().toString(); // gera senha aleatória para ser alterada pelo usuario
+        coordinator.resetToken = BcryptUtil.bcryptHash(token);
+        coordinator.resetTokenExpiresAt = LocalDateTime.now().plusMinutes(30);
 
         ParishEntity parish = ParishEntity.<ParishEntity>findByIdOptional(req.parishId())
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -76,6 +80,12 @@ public class CoordinatorService {
 
         coordinator.active = Boolean.TRUE;
         coordinator.persist();
+
+        this.emailService.sendWelcomeEmail(
+                coordinator.name,
+                coordinator.email,
+                token,
+                coordinator.parish.name);
 
         return CoordinatorResponseDTO.fromEntity(coordinator);
     }
@@ -91,15 +101,6 @@ public class CoordinatorService {
 
         if(req.name() != null) {
             coordinator.name = req.name();
-        }
-
-        if(req.password() != null && req.confirmPassword() != null) {
-            if(!req.password().equals(req.confirmPassword())) {
-                throw new BusinessRuleException(
-                        "Passwords mismatch.",
-                        "The passwords informed don't match");
-            }
-            coordinator.password = BcryptUtil.bcryptHash(req.password());
         }
 
         coordinator.persist();

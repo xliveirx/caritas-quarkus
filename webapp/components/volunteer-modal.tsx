@@ -4,8 +4,8 @@ import { useState, useEffect, type FormEvent } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/contexts/toast-context';
 import { api } from '@/services/api';
-import { Field, inputClass, EyeIcon } from '@/components/ui/field';
-import type { CoordinatorResponse } from '@/shared/types/coordinator-response';
+import { Field, inputClass } from '@/components/ui/field';
+import type { VolunteerResponse } from '@/shared/types/volunteer-response';
 import type { ParishResponse } from '@/shared/types/parish-response';
 import type { ApiErrorResponse } from '@/shared/types/api-error-response';
 
@@ -14,9 +14,12 @@ import type { ApiErrorResponse } from '@/shared/types/api-error-response';
 interface Props {
   open: boolean;
   onClose: () => void;
-  onSaved: (coordinator: CoordinatorResponse) => void;
-  coordinator?: CoordinatorResponse;
-  parishes: ParishResponse[];
+  onSaved: (volunteer: VolunteerResponse) => void;
+  volunteer?: VolunteerResponse;
+  /** Pass parishes list for ADMIN to allow parish selection */
+  parishes?: ParishResponse[];
+  /** When true, parishId field is visible */
+  isAdmin: boolean;
   /** When set, parish selector is hidden and this value is used */
   lockedParishId?: number;
 }
@@ -25,41 +28,33 @@ interface FormState {
   name: string;
   email: string;
   parishId: string;
-  password: string;
-  confirmPassword: string;
 }
 
 type FormErrors = Partial<Record<keyof FormState, string>>;
 
 /* ─── Modal ──────────────────────────────────────────────────────── */
 
-export function CoordinatorModal({ open, onClose, onSaved, coordinator, parishes, lockedParishId }: Props) {
-  const isEdit = !!coordinator;
+export function VolunteerModal({ open, onClose, onSaved, volunteer, parishes, isAdmin, lockedParishId }: Props) {
+  const isEdit = !!volunteer;
   const { token } = useAuth();
   const toast = useToast();
 
   const [form, setForm] = useState<FormState>({
-    name: '', email: '', parishId: '', password: '', confirmPassword: '',
+    name: '', email: '', parishId: '',
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [isPending, setIsPending] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
 
   useEffect(() => {
     if (open) {
       setForm({
-        name: coordinator?.name ?? '',
-        email: coordinator?.email ?? '',
-        parishId: coordinator?.parishId?.toString() ?? lockedParishId?.toString() ?? '',
-        password: '',
-        confirmPassword: '',
+        name: volunteer?.name ?? '',
+        email: volunteer?.email ?? '',
+        parishId: volunteer?.parishId?.toString() ?? lockedParishId?.toString() ?? '',
       });
       setErrors({});
-      setShowPassword(false);
-      setShowConfirm(false);
     }
-  }, [open, coordinator]);
+  }, [open, volunteer]);
 
   useEffect(() => {
     if (!open) return;
@@ -79,15 +74,8 @@ export function CoordinatorModal({ open, onClose, onSaved, coordinator, parishes
       if (!form.name.trim()) e.name = 'Nome obrigatório';
       if (!form.email.trim()) e.email = 'E-mail obrigatório';
       else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = 'E-mail inválido';
-      if (!form.parishId) e.parishId = 'Selecione uma paróquia';
-      if (!form.password) e.password = 'Senha obrigatória';
-      else if (form.password.length < 6) e.password = 'Mínimo 6 caracteres';
-      if (!form.confirmPassword) e.confirmPassword = 'Confirmação obrigatória';
-      else if (form.password !== form.confirmPassword) e.confirmPassword = 'As senhas não coincidem';
-    } else if (form.password) {
-      if (form.password.length < 6) e.password = 'Mínimo 6 caracteres';
-      if (!form.confirmPassword) e.confirmPassword = 'Confirmação obrigatória';
-      else if (form.password !== form.confirmPassword) e.confirmPassword = 'As senhas não coincidem';
+    } else {
+      if (!form.name.trim()) e.name = 'Nome obrigatório';
     }
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -98,33 +86,27 @@ export function CoordinatorModal({ open, onClose, onSaved, coordinator, parishes
     if (!validate() || !token) return;
     setIsPending(true);
     try {
-      let result: CoordinatorResponse;
+      let result: VolunteerResponse;
+      const parishId = form.parishId ? Number(form.parishId) : null;
+
       if (isEdit) {
-        const body: Record<string, unknown> = {};
-        if (form.name.trim()) body.name = form.name.trim();
-        if (form.password) {
-          body.password = form.password;
-          body.confirmPassword = form.confirmPassword;
-        }
-        result = await api.put<CoordinatorResponse>(
-          `/api/v1/coordinators/${coordinator!.id}`,
-          body,
+        result = await api.put<VolunteerResponse>(
+          `/api/v1/volunteers/${volunteer!.id}`,
+          { name: form.name.trim() },
           token
         );
-        toast.success('Coordenador atualizado!', `"${result.name}" foi atualizado com sucesso.`);
+        toast.success('Voluntário atualizado!', `"${result.name}" foi atualizado com sucesso.`);
       } else {
-        result = await api.post<CoordinatorResponse>(
-          '/api/v1/coordinators',
+        result = await api.post<VolunteerResponse>(
+          '/api/v1/volunteers',
           {
             name: form.name.trim(),
             email: form.email.trim(),
-            parishId: Number(form.parishId),
-            password: form.password,
-            confirmPassword: form.confirmPassword,
+            parishId: isAdmin ? parishId : null,
           },
           token
         );
-        toast.success('Coordenador cadastrado!', `"${result.name}" foi adicionado com sucesso.`);
+        toast.success('Voluntário cadastrado!', `"${result.name}" foi adicionado com sucesso.`);
       }
       onSaved(result);
       onClose();
@@ -132,7 +114,7 @@ export function CoordinatorModal({ open, onClose, onSaved, coordinator, parishes
       const apiErr = err as ApiErrorResponse;
       const detail = apiErr?.errors?.map((v) => `${v.field}: ${v.message}`).join(' · ');
       toast.error(
-        apiErr?.title ?? (isEdit ? 'Erro ao atualizar coordenador' : 'Erro ao cadastrar coordenador'),
+        apiErr?.title ?? (isEdit ? 'Erro ao atualizar voluntário' : 'Erro ao cadastrar voluntário'),
         detail || apiErr?.message
       );
     } finally {
@@ -155,10 +137,10 @@ export function CoordinatorModal({ open, onClose, onSaved, coordinator, parishes
         <div className="flex items-center justify-between px-6 py-5 border-b border-slate-200">
           <div>
             <h2 className="text-base font-bold text-slate-900">
-              {isEdit ? 'Editar coordenador' : 'Novo coordenador'}
+              {isEdit ? 'Editar voluntário' : 'Novo voluntário'}
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
-              {isEdit ? 'Atualize os dados do coordenador' : 'Preencha os dados do novo coordenador'}
+              {isEdit ? 'Atualize os dados do voluntário' : 'Preencha os dados do novo voluntário'}
             </p>
           </div>
           <button
@@ -182,89 +164,38 @@ export function CoordinatorModal({ open, onClose, onSaved, coordinator, parishes
 
             <Field label="Nome" required={!isEdit} error={errors.name}>
               <input
-                type="text" placeholder="João Silva" disabled={isPending}
+                type="text" placeholder="Maria Souza" disabled={isPending}
                 value={form.name} onChange={(e) => set('name', e.target.value)}
                 className={inputClass}
               />
             </Field>
 
             {!isEdit && (
-              <>
-                <Field label="E-mail" required error={errors.email}>
-                  <input
-                    type="email" placeholder="joao@paroquia.org" disabled={isPending}
-                    value={form.email} onChange={(e) => set('email', e.target.value)}
-                    className={inputClass}
-                  />
-                </Field>
-
-                {!lockedParishId && (
-                  <Field label="Paróquia" required error={errors.parishId}>
-                    <select
-                      value={form.parishId}
-                      onChange={(e) => set('parishId', e.target.value)}
-                      disabled={isPending}
-                      className={inputClass}
-                    >
-                      <option value="">Selecione uma paróquia</option>
-                      {parishes.map((p) => (
-                        <option key={p.id} value={p.id}>{p.name}</option>
-                      ))}
-                    </select>
-                  </Field>
-                )}
-              </>
+              <Field label="E-mail" required error={errors.email}>
+                <input
+                  type="email" placeholder="maria@paroquia.org" disabled={isPending}
+                  value={form.email} onChange={(e) => set('email', e.target.value)}
+                  className={inputClass}
+                />
+              </Field>
             )}
 
-            <div className="flex items-center gap-2 pt-1">
-              <div className="flex-1 h-px bg-slate-200" />
-              <span className="text-xs font-medium text-slate-400">
-                {isEdit ? 'Alterar senha (opcional)' : 'Acesso'}
-              </span>
-              <div className="flex-1 h-px bg-slate-200" />
-            </div>
-
-            <Field label="Senha" required={!isEdit} error={errors.password}>
-              <div className="relative">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder={isEdit ? 'Deixe em branco para não alterar' : 'Mínimo 6 caracteres'}
+            {isAdmin && !lockedParishId && !isEdit && parishes && parishes.length > 0 && (
+              <Field label="Paróquia" error={errors.parishId}>
+                <select
+                  value={form.parishId}
+                  onChange={(e) => set('parishId', e.target.value)}
                   disabled={isPending}
-                  value={form.password}
-                  onChange={(e) => set('password', e.target.value)}
-                  className={inputClass + ' pr-10'}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((v) => !v)}
-                  aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  className={inputClass}
                 >
-                  <EyeIcon open={showPassword} />
-                </button>
-              </div>
-            </Field>
+                  <option value="">Nenhuma (opcional)</option>
+                  {parishes.map((p) => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </Field>
+            )}
 
-            <Field label="Confirmar senha" required={!isEdit} error={errors.confirmPassword}>
-              <div className="relative">
-                <input
-                  type={showConfirm ? 'text' : 'password'}
-                  placeholder="Repita a senha"
-                  disabled={isPending}
-                  value={form.confirmPassword}
-                  onChange={(e) => set('confirmPassword', e.target.value)}
-                  className={inputClass + ' pr-10'}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirm((v) => !v)}
-                  aria-label={showConfirm ? 'Ocultar senha' : 'Mostrar senha'}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                >
-                  <EyeIcon open={showConfirm} />
-                </button>
-              </div>
-            </Field>
           </div>
 
           {/* Footer */}
@@ -296,7 +227,7 @@ export function CoordinatorModal({ open, onClose, onSaved, coordinator, parishes
                   </svg>
                   Salvando...
                 </>
-              ) : (isEdit ? 'Salvar alterações' : 'Cadastrar coordenador')}
+              ) : (isEdit ? 'Salvar alterações' : 'Cadastrar voluntário')}
             </button>
           </div>
         </form>

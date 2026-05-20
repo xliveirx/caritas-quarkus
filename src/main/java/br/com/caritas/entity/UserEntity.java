@@ -28,4 +28,8 @@ public class UserEntity extends PanacheEntity {
     public LocalDateTime updatedAt;
 
     public boolean active;
+
+    public String resetToken;
+
+    public LocalDateTime resetTokenExpiresAt;
 }

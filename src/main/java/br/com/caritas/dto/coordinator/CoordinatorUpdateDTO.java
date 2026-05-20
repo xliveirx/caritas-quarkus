@@ -1,8 +1,4 @@
 package br.com.caritas.dto.coordinator;
 
-public record CoordinatorUpdateDTO(
-        String name,
-        String password,
-        String confirmPassword
-) {
+public record CoordinatorUpdateDTO(String name) {
 }

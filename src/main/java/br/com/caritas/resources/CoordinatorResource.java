@@ -39,6 +39,16 @@ public class CoordinatorResource {
         return Response.ok(coordinator).build();
     }
 
+    @POST
+    @RolesAllowed("ADMIN")
+    public Response createCoordinatorUser(@Valid CoordinatorRequestDTO req) {
+
+        var coordinator = this.coordinatorService.createCoordinator(req);
+
+        return Response.ok(coordinator).build();
+    }
+
+
     @PUT
     @RolesAllowed("ADMIN")
     @Path("/{id}")
@@ -46,15 +56,6 @@ public class CoordinatorResource {
                                       CoordinatorUpdateDTO req) {
 
         var coordinator = this.coordinatorService.updateCoordinator(id, req);
-
-        return Response.ok(coordinator).build();
-    }
-
-    @POST
-    @RolesAllowed("ADMIN")
-    public Response createCoordinatorUser(@Valid CoordinatorRequestDTO req) {
-
-        var coordinator = this.coordinatorService.createCoordinator(req);
 
         return Response.ok(coordinator).build();
     }

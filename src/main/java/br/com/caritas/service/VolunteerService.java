@@ -9,39 +9,44 @@ import br.com.caritas.entity.ParishEntity;
 import br.com.caritas.entity.Roles;
 import br.com.caritas.entity.UserEntity;
 import br.com.caritas.entity.VolunteerEntity;
-import br.com.caritas.exception.AuthException;
 import br.com.caritas.exception.BusinessRuleException;
 import br.com.caritas.exception.ResourceNotFoundException;
 import io.quarkus.elytron.security.common.BcryptUtil;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.quarkus.panache.common.Page;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import org.eclipse.microprofile.jwt.JsonWebToken;
 
+import java.time.LocalDateTime;
 import java.util.Set;
+import java.util.UUID;
 
 @ApplicationScoped
 public class VolunteerService {
+
+    @Inject
+    private EmailService emailService;
 
     public ApiListDTO getAllVolunteersByParishId(int page, int size, Long parishId, JsonWebToken jwt) {
 
         var groups = jwt.getGroups();
 
         PanacheQuery<VolunteerEntity> query;
-        if (groups.contains(Roles.COORDINATOR.name())) {
-            Long parish = Long.valueOf(jwt.getClaim("parish").toString());
-            query = VolunteerEntity.<VolunteerEntity>find("parish.id = ?1", parish)
-                    .page(Page.of(page, size));
-
-        } else if (groups.contains(Roles.ADMIN.name()) && parishId != null) {
+        if (groups.contains(Roles.ADMIN.name())) {
             query = VolunteerEntity.<VolunteerEntity>find("parish.id = ?1", parishId)
                     .page(Page.of(page, size));
-
         } else {
-            throw new AuthException(
-                    "Auth error.",
-                    "You don't have permission to access this resource");
+            Long parish = Long.valueOf(jwt.getClaim("parish").toString());
+            if(!parish.equals(parishId)){
+                throw new BusinessRuleException(
+                        "You are not allowed to do that.",
+                        "A coordinator can only list volunteers from his own parish."
+                );
+            }
+            query = VolunteerEntity.<VolunteerEntity>find("parish.id = ?1", parishId)
+                    .page(Page.of(page, size));
         }
 
         var volunteers = query.list()
@@ -80,12 +85,6 @@ public class VolunteerService {
                             "The informed e-mail has already been registered");
                 });
 
-        if (!req.password().equals(req.confirmPassword())) {
-            throw new BusinessRuleException(
-                    "Passwords mismatch",
-                    "The passwords informed don't match");
-        }
-
         var groups = jwt.getGroups();
 
         if (groups.contains(Roles.ADMIN.name()) && req.parishId() == null) {
@@ -97,7 +96,10 @@ public class VolunteerService {
         VolunteerEntity volunteer = new VolunteerEntity();
         volunteer.name = req.name();
         volunteer.email = req.email();
-        volunteer.password = BcryptUtil.bcryptHash(req.password());
+
+        String token = UUID.randomUUID().toString();
+        volunteer.resetToken = BcryptUtil.bcryptHash(token);
+        volunteer.resetTokenExpiresAt = LocalDateTime.now().plusSeconds(15);
 
         if (groups.contains(Roles.COORDINATOR.name())) {
             Long parishId = Long.valueOf(jwt.getClaim("parish").toString());
@@ -117,6 +119,12 @@ public class VolunteerService {
 
         volunteer.active = Boolean.TRUE;
         volunteer.persist();
+
+        this.emailService.sendWelcomeEmail(
+                volunteer.name,
+                volunteer.email,
+                token,
+                volunteer.parish.name);
 
         return VolunteerResponseDTO.fromEntity(volunteer);
     }
@@ -139,14 +147,6 @@ public class VolunteerService {
             volunteer.name = req.name();
         }
 
-        if(req.password() != null && req.confirmPassword() != null) {
-            if(!req.password().equals(req.confirmPassword())) {
-                throw new BusinessRuleException(
-                        "Passwords mismatch.",
-                        "The passwords informed don't match");
-            }
-            volunteer.password = BcryptUtil.bcryptHash(req.password());
-        }
         volunteer.persist();
         return VolunteerResponseDTO.fromEntity(volunteer);
     }
