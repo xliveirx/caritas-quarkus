@@ -2,7 +2,7 @@ package br.com.caritas.service;
 
 import br.com.caritas.dto.UserResponseDTO;
 import br.com.caritas.dto.UserUpdateDTO;
-import br.com.caritas.entity.UserEntity;
+import br.com.caritas.entity.user.UserEntity;
 import br.com.caritas.exception.BusinessRuleException;
 import br.com.caritas.exception.ResourceNotFoundException;
 import io.quarkus.elytron.security.common.BcryptUtil;

@@ -1,6 +1,6 @@
 package br.com.caritas.dto.family;
 
-import br.com.caritas.entity.FamilyMemberEntity;
+import br.com.caritas.entity.family.FamilyMemberEntity;
 
 import java.time.LocalDate;
 import java.util.List;

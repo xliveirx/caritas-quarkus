@@ -1,9 +1,12 @@
 package br.com.caritas.service;
 
-import br.com.caritas.dto.auth.*;
-import br.com.caritas.entity.CoordinatorEntity;
-import br.com.caritas.entity.UserEntity;
-import br.com.caritas.entity.VolunteerEntity;
+import br.com.caritas.dto.user.CredentialsRequestDTO;
+import br.com.caritas.dto.user.ForgotPasswordRequestDTO;
+import br.com.caritas.dto.user.LoginRequestDTO;
+import br.com.caritas.dto.user.LoginResponseDTO;
+import br.com.caritas.entity.user.CoordinatorEntity;
+import br.com.caritas.entity.user.UserEntity;
+import br.com.caritas.entity.user.VolunteerEntity;
 import br.com.caritas.exception.AuthException;
 import br.com.caritas.exception.BusinessRuleException;
 import br.com.caritas.exception.ResourceNotFoundException;
@@ -39,8 +42,9 @@ public class AuthService {
         }
 
         String token = this.tokenService.generateToken(user);
+        String refreshToken = this.tokenService.generateRefreshToken(user);
 
-        return new LoginResponseDTO(token);
+        return new LoginResponseDTO(token, refreshToken);
     }
 
     @Transactional

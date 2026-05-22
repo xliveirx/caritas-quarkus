@@ -5,6 +5,7 @@ export interface ParishResponse {
   name: string;
   address: AddressResponse;
   cnpj: string;
+  isDiocese: boolean;
   createdAt: string;
   updatedAt: string;
 }

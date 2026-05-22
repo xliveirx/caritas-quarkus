@@ -2,18 +2,19 @@ package br.com.caritas.service;
 
 import br.com.caritas.dto.ApiListDTO;
 import br.com.caritas.dto.PaginationDTO;
-import br.com.caritas.dto.volunteer.VolunteerRequestDTO;
-import br.com.caritas.dto.volunteer.VolunteerResponseDTO;
-import br.com.caritas.dto.volunteer.VolunteerUpdateDTO;
-import br.com.caritas.entity.ParishEntity;
-import br.com.caritas.entity.Roles;
-import br.com.caritas.entity.UserEntity;
-import br.com.caritas.entity.VolunteerEntity;
+import br.com.caritas.dto.user.VolunteerRequestDTO;
+import br.com.caritas.dto.user.VolunteerResponseDTO;
+import br.com.caritas.dto.user.VolunteerUpdateDTO;
+import br.com.caritas.entity.parish.ParishEntity;
+import br.com.caritas.entity.user.Roles;
+import br.com.caritas.entity.user.UserEntity;
+import br.com.caritas.entity.user.VolunteerEntity;
 import br.com.caritas.exception.BusinessRuleException;
 import br.com.caritas.exception.ResourceNotFoundException;
 import io.quarkus.elytron.security.common.BcryptUtil;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.quarkus.panache.common.Page;
+import io.quarkus.panache.common.Sort;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -35,7 +36,8 @@ public class VolunteerService {
 
         PanacheQuery<VolunteerEntity> query;
         if (groups.contains(Roles.ADMIN.name())) {
-            query = VolunteerEntity.<VolunteerEntity>find("parish.id = ?1", parishId)
+            query = VolunteerEntity.<VolunteerEntity>find("parish.id = ?1", parishId,
+                            Sort.by("name"))
                     .page(Page.of(page, size));
         } else {
             Long parish = Long.valueOf(jwt.getClaim("parish").toString());
@@ -45,7 +47,8 @@ public class VolunteerService {
                         "A coordinator can only list volunteers from his own parish."
                 );
             }
-            query = VolunteerEntity.<VolunteerEntity>find("parish.id = ?1", parishId)
+            query = VolunteerEntity.<VolunteerEntity>find("parish.id = ?1", parishId,
+                            Sort.by("name"))
                     .page(Page.of(page, size));
         }
 
@@ -103,14 +106,16 @@ public class VolunteerService {
 
         if (groups.contains(Roles.COORDINATOR.name())) {
             Long parishId = Long.valueOf(jwt.getClaim("parish").toString());
-            ParishEntity parish = ParishEntity.<ParishEntity>findByIdOptional(parishId)
+            ParishEntity parish = ParishEntity.<ParishEntity>find("id = ?1 and isDiocese = ?2", parishId, Boolean.FALSE)
+                    .firstResultOptional()
                     .orElseThrow(() -> new ResourceNotFoundException(
                             "Parish not found.",
                             "Parish with id " + parishId + " not found."));
             volunteer.parish = parish;
 
         } else if (groups.contains(Roles.ADMIN.name())) {
-            ParishEntity parish = ParishEntity.<ParishEntity>findByIdOptional(req.parishId())
+            ParishEntity parish = ParishEntity.<ParishEntity>find("id = ?1 and isDiocese = ?2", req.parishId(), Boolean.FALSE)
+                    .firstResultOptional()
                     .orElseThrow(() -> new ResourceNotFoundException(
                             "Parish not found.",
                             "Parish with id " + req.parishId() + " not found."));

@@ -1,17 +1,18 @@
 package br.com.caritas.service;
 
 import br.com.caritas.dto.ApiListDTO;
-import br.com.caritas.dto.coordinator.CoordinatorRequestDTO;
-import br.com.caritas.dto.coordinator.CoordinatorResponseDTO;
 import br.com.caritas.dto.PaginationDTO;
-import br.com.caritas.dto.coordinator.CoordinatorUpdateDTO;
-import br.com.caritas.entity.CoordinatorEntity;
-import br.com.caritas.entity.ParishEntity;
-import br.com.caritas.entity.UserEntity;
+import br.com.caritas.dto.user.CoordinatorRequestDTO;
+import br.com.caritas.dto.user.CoordinatorResponseDTO;
+import br.com.caritas.dto.user.CoordinatorUpdateDTO;
+import br.com.caritas.entity.parish.ParishEntity;
+import br.com.caritas.entity.user.CoordinatorEntity;
+import br.com.caritas.entity.user.UserEntity;
 import br.com.caritas.exception.BusinessRuleException;
 import br.com.caritas.exception.ResourceNotFoundException;
 import io.quarkus.elytron.security.common.BcryptUtil;
 import io.quarkus.panache.common.Page;
+import io.quarkus.panache.common.Sort;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -28,7 +29,9 @@ public class CoordinatorService {
 
     public ApiListDTO getAllCoordinatorsByParish(int page, int size, Long parishId) {
 
-        var query = CoordinatorEntity.<CoordinatorEntity>find("parish.id = ?1", parishId)
+        var query = CoordinatorEntity.<CoordinatorEntity>find(
+                "parish.id = ?1 and parish.isDiocese = ?2", parishId, Boolean.FALSE,
+                        Sort.by("name"))
                 .page(Page.of(page, size));
 
         var coordinators = query.list()
@@ -71,7 +74,8 @@ public class CoordinatorService {
         coordinator.resetToken = BcryptUtil.bcryptHash(token);
         coordinator.resetTokenExpiresAt = LocalDateTime.now().plusMinutes(30);
 
-        ParishEntity parish = ParishEntity.<ParishEntity>findByIdOptional(req.parishId())
+        ParishEntity parish = ParishEntity.<ParishEntity>find("id = ?1 and isDiocese = ?2", req.parishId(), Boolean.FALSE)
+                .firstResultOptional()
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Parish not found.",
                         "Parish not found with id " + req.parishId()));

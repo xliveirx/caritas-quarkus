@@ -65,7 +65,7 @@ export default function FamiliasPage() {
   useEffect(() => {
     if (!isAdmin || !token) return;
     api.get<PaginatedResponse<ParishResponse>>('/api/v1/parishes?page=0&size=100', token)
-      .then((data) => setParishes(data.data))
+      .then((data) => setParishes(data.data.filter((p) => !p.isDiocese)))
       .catch(() => {});
   }, [isAdmin, token]);
 

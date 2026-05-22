@@ -51,7 +51,7 @@ export default function ParoquiasPage() {
           `/api/v1/parishes?page=${currentPage}&size=${PAGE_SIZE}`,
           token
         );
-        setParishes(data.data);
+        setParishes(data.data.filter((p) => !p.isDiocese));
         setTotalItems(data.pagination.totalItems);
         setTotalPages(data.pagination.totalPages);
       } catch (err) {

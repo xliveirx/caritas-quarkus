@@ -5,11 +5,12 @@ import br.com.caritas.dto.parish.ParishRequestDTO;
 import br.com.caritas.dto.parish.ParishResponseDTO;
 import br.com.caritas.dto.parish.ParishUpdateDTO;
 import br.com.caritas.entity.Address;
-import br.com.caritas.entity.ParishEntity;
+import br.com.caritas.entity.parish.ParishEntity;
 import br.com.caritas.exception.BusinessRuleException;
 import br.com.caritas.exception.ResourceNotFoundException;
 import br.com.caritas.util.CaritasUtil;
 import io.quarkus.panache.common.Page;
+import io.quarkus.panache.common.Sort;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
@@ -19,7 +20,7 @@ public class ParishService {
 
     public ApiListDTO getAllParishes(int page, int size) {
 
-        var query = ParishEntity.<ParishEntity>findAll()
+        var query = ParishEntity.<ParishEntity>findAll(Sort.by("name"))
                 .page(Page.of(page, size));
 
         var parishes = query.list()
@@ -33,7 +34,8 @@ public class ParishService {
 
     public ParishResponseDTO getParishById(Long id) {
 
-        ParishEntity parish = ParishEntity.<ParishEntity>findByIdOptional(id)
+        ParishEntity parish = ParishEntity.<ParishEntity>find("id = ?1 and isDiocese = ?2", id, Boolean.FALSE)
+                .firstResultOptional()
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Parish not found.",
                         "Parish with id " + id + " not found."));
@@ -73,7 +75,8 @@ public class ParishService {
     @Transactional
     public ParishResponseDTO updateParish(@Valid ParishUpdateDTO req, Long id) {
 
-        ParishEntity parish = ParishEntity.<ParishEntity>findByIdOptional(id)
+        ParishEntity parish = ParishEntity.<ParishEntity>find("id = ?1 and isDiocese = ?2", id, Boolean.FALSE)
+                .firstResultOptional()
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Parish not found.",
                         "Parish with id " + id + " not found."));
@@ -118,7 +121,8 @@ public class ParishService {
     @Transactional
     public void deleteParish(Long id) {
 
-        ParishEntity parish = ParishEntity.<ParishEntity>findByIdOptional(id)
+        ParishEntity parish = ParishEntity.<ParishEntity>find("id = ?1 and isDiocese = ?2", id, Boolean.FALSE)
+                .firstResultOptional()
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Parish not found.",
                         "Parish with id " + id + " not found."));

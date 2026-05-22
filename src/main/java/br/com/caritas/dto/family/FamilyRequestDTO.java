@@ -1,7 +1,7 @@
 package br.com.caritas.dto.family;
 
-import br.com.caritas.dto.address.AddressRequestDTO;
-import br.com.caritas.entity.Situation;
+import br.com.caritas.dto.AddressRequestDTO;
+import br.com.caritas.entity.family.Situation;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;

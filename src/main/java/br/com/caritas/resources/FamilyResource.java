@@ -6,6 +6,7 @@ import br.com.caritas.service.FamilyService;
 import io.quarkus.security.Authenticated;
 import jakarta.annotation.Resource;
 import jakarta.inject.Inject;
+import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.jwt.JsonWebToken;
@@ -42,7 +43,7 @@ public class FamilyResource {
 
     @POST
     @Authenticated
-    public Response createFamily(FamilyRequestDTO req) {
+    public Response createFamily(@Valid FamilyRequestDTO req) {
 
         var family = this.familyService.createFamily(req, jwt);
 
@@ -54,7 +55,7 @@ public class FamilyResource {
     @Authenticated
     @Path("/{id}")
     public Response updateFamily(@PathParam("id") Long id,
-                                 FamilyUpdateDTO req) {
+                                 @Valid FamilyUpdateDTO req) {
 
         var family = this.familyService.updateFamily(req, id, jwt);
 

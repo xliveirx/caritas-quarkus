@@ -1,6 +1,6 @@
 package br.com.caritas.dto.parish;
 
-import br.com.caritas.dto.address.AddressRequestDTO;
+import br.com.caritas.dto.AddressRequestDTO;
 import jakarta.validation.constraints.Pattern;
 
 public record ParishUpdateDTO(

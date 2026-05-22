@@ -1,8 +1,8 @@
 package br.com.caritas.dto.family;
 
-import br.com.caritas.dto.address.AddressResponseDTO;
-import br.com.caritas.entity.FamilyEntity;
-import br.com.caritas.entity.Situation;
+import br.com.caritas.dto.AddressResponseDTO;
+import br.com.caritas.entity.family.FamilyEntity;
+import br.com.caritas.entity.family.Situation;
 
 import java.math.BigDecimal;
 import java.util.List;
