@@ -27,8 +27,8 @@ const PAGE_SIZE = 10;
 
 /* ─── Action Buttons ─────────────────────────────────────────────── */
 
-function ActionButtons({ name, active, onEdit, onToggle, editLoading = false, toggleLoading = false }: {
-  name: string; active: boolean; onEdit: () => void; onToggle: () => void;
+function ActionButtons({ name, active, canActivate = true, onEdit, onToggle, editLoading = false, toggleLoading = false }: {
+  name: string; active: boolean; canActivate?: boolean; onEdit: () => void; onToggle: () => void;
   editLoading?: boolean; toggleLoading?: boolean;
 }) {
   return (
@@ -61,8 +61,8 @@ function ActionButtons({ name, active, onEdit, onToggle, editLoading = false, to
         type="button"
         aria-label={active ? `Inativar ${name}` : `Ativar ${name}`}
         onClick={onToggle}
-        disabled={toggleLoading || editLoading}
-        title={active ? 'Inativar' : 'Ativar'}
+        disabled={toggleLoading || editLoading || (!active && !canActivate)}
+        title={active ? 'Inativar' : canActivate ? 'Ativar' : 'Usuário sem senha definida'}
         className={[
           'p-1.5 rounded-lg transition-colors duration-150',
           'focus:outline-none focus-visible:ring-2 focus-visible:ring-wine-700',
@@ -708,6 +708,7 @@ export default function ParishDetailPage() {
                             <ActionButtons
                               name={coord.name}
                               active={coord.active}
+                              canActivate={coord.hasPassword}
                               onEdit={() => openEditCoordinator(coord)}
                               onToggle={() => setCoordToToggle(coord)}
                               editLoading={loadingEditCoordId === coord.id}
@@ -822,6 +823,7 @@ export default function ParishDetailPage() {
                           <ActionButtons
                             name={vol.name}
                             active={vol.active}
+                            canActivate={vol.hasPassword}
                             onEdit={() => openEditVolunteer(vol)}
                             onToggle={() => setVolToToggle(vol)}
                             editLoading={loadingEditVolId === vol.id}

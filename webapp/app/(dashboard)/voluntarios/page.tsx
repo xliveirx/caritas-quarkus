@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/contexts/toast-context';
@@ -16,8 +16,16 @@ import { getParishFromToken } from '@/shared/utils/token';
 import type { VolunteerResponse } from '@/shared/types/volunteer-response';
 import type { PaginatedResponse } from '@/shared/types/paginated-response';
 import type { ApiErrorResponse } from '@/shared/types/api-error-response';
+import { SearchBar } from '@/components/ui/search-bar';
+import { FilterDropdown } from '@/components/ui/filter-dropdown';
 
 const PAGE_SIZE = 10;
+
+const ACTIVE_OPTIONS = [
+  { value: '', label: 'Todos' },
+  { value: 'true', label: 'Ativo' },
+  { value: 'false', label: 'Inativo' },
+];
 
 /* ─── Page ───────────────────────────────────────────────────────── */
 
@@ -41,6 +49,23 @@ export default function VoluntariosPage() {
   const [togglingId, setTogglingId]         = useState<number | null>(null);
   const [volToToggle, setVolToToggle]       = useState<VolunteerResponse | null>(null);
 
+  const [searchInput, setSearchInput]   = useState('');
+  const [search, setSearch]             = useState('');
+  const [draftActive, setDraftActive]   = useState('');
+  const [active, setActive]             = useState('');
+  const [openDropdown, setOpenDropdown] = useState<'active' | null>(null);
+  const filterRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!openDropdown) return;
+    function onMouseDown(e: MouseEvent) {
+      if (filterRef.current && !filterRef.current.contains(e.target as Node))
+        setOpenDropdown(null);
+    }
+    document.addEventListener('mousedown', onMouseDown);
+    return () => document.removeEventListener('mousedown', onMouseDown);
+  }, [openDropdown]);
+
   /* ── Role guard ─────────────────────────────────────────────────── */
   useEffect(() => {
     if (user && !isCoordinator) router.replace('/dashboard');
@@ -53,8 +78,11 @@ export default function VoluntariosPage() {
       setIsLoading(true);
       setFetchError(null);
       try {
+        const qs = new URLSearchParams({ page: String(currentPage), size: String(PAGE_SIZE) });
+        if (search) qs.set('search', search);
+        if (active) qs.set('active', active);
         const data = await api.get<PaginatedResponse<VolunteerResponse>>(
-          `/api/v1/volunteers/parish/${parishId}?page=${currentPage}&size=${PAGE_SIZE}`,
+          `/api/v1/volunteers/parish/${parishId}?${qs}`,
           token
         );
         setVolunteers(data.data);
@@ -70,10 +98,24 @@ export default function VoluntariosPage() {
         setIsLoading(false);
       }
     },
-    [token, parishId]
+    [token, parishId, search, active]
   );
 
   useEffect(() => { fetchVolunteers(page); }, [fetchVolunteers, page]);
+
+  function submitSearch() {
+    setSearch(searchInput.trim());
+    setActive(draftActive);
+    setPage(0);
+  }
+
+  function clearFilters() {
+    setSearchInput('');
+    setSearch('');
+    setDraftActive('');
+    setActive('');
+    setPage(0);
+  }
 
   /* ── Handlers ───────────────────────────────────────────────────── */
 
@@ -174,6 +216,33 @@ export default function VoluntariosPage() {
               </svg>
               Novo voluntário
             </button>
+          </div>
+        </div>
+
+        {/* Search + filters */}
+        <div className="mb-4 space-y-2.5">
+          <SearchBar
+            value={searchInput}
+            onChange={setSearchInput}
+            onSubmit={submitSearch}
+            placeholder="Buscar por nome ou e-mail..."
+          />
+          <div ref={filterRef} className="flex flex-wrap items-center gap-2">
+            <FilterDropdown
+              label="Status"
+              value={draftActive}
+              options={ACTIVE_OPTIONS}
+              isOpen={openDropdown === 'active'}
+              onToggle={() => setOpenDropdown(openDropdown === 'active' ? null : 'active')}
+              onSelect={(v) => { setDraftActive(v); setOpenDropdown(null); }}
+            />
+            {(searchInput || draftActive) && (
+              <button type="button" onClick={clearFilters}
+                className="text-xs font-semibold text-slate-400 hover:text-slate-600
+                  transition-colors duration-150 underline underline-offset-2">
+                Limpar tudo
+              </button>
+            )}
           </div>
         </div>
 

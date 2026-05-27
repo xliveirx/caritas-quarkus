@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { SearchBar } from '@/components/ui/search-bar';
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/contexts/toast-context';
 import { api } from '@/services/api';
@@ -16,6 +17,7 @@ import type { PaginatedResponse } from '@/shared/types/paginated-response';
 import type { ApiErrorResponse } from '@/shared/types/api-error-response';
 
 const PAGE_SIZE = 10;
+
 
 /* ─── Page ───────────────────────────────────────────────────────── */
 
@@ -36,6 +38,9 @@ export default function ParoquiasPage() {
   const [parishToDelete, setParishToDelete] = useState<ParishResponse | null>(null);
   const [isDeleting, setIsDeleting]       = useState(false);
 
+  const [searchInput, setSearchInput]   = useState('');
+  const [search, setSearch]             = useState('');
+
   /* ── Role guard ─────────────────────────────────────────────────── */
   useEffect(() => {
     if (user && !isAdmin) router.replace('/dashboard');
@@ -47,8 +52,10 @@ export default function ParoquiasPage() {
       if (!token || !isAdmin) return;
       setIsLoading(true);
       try {
+        const qs = new URLSearchParams({ page: String(currentPage), size: String(PAGE_SIZE) });
+        if (search) qs.set('search', search);
         const data = await api.get<PaginatedResponse<ParishResponse>>(
-          `/api/v1/parishes?page=${currentPage}&size=${PAGE_SIZE}`,
+          `/api/v1/parishes?${qs}`,
           token
         );
         setParishes(data.data);
@@ -61,10 +68,15 @@ export default function ParoquiasPage() {
         setIsLoading(false);
       }
     },
-    [token, isAdmin, toast]
+    [token, isAdmin, toast, search]
   );
 
   useEffect(() => { fetchParishes(page); }, [fetchParishes, page]);
+
+  function submitSearch() {
+    setSearch(searchInput.trim());
+    setPage(0);
+  }
 
   function handleCreated(parish: ParishResponse) {
     if (page === 0) {
@@ -130,6 +142,25 @@ export default function ParoquiasPage() {
               Nova paróquia
             </button>
           </div>
+        </div>
+
+        {/* Search + filters */}
+        <div className="mb-4 space-y-2.5">
+          <SearchBar
+            value={searchInput}
+            onChange={setSearchInput}
+            onSubmit={submitSearch}
+            placeholder="Buscar por nome ou CNPJ..."
+          />
+          {(searchInput || search) && (
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={() => { setSearchInput(''); setSearch(''); setPage(0); }}
+                className="text-xs font-semibold text-slate-400 hover:text-slate-600
+                  transition-colors duration-150 underline underline-offset-2">
+                Limpar tudo
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Table */}

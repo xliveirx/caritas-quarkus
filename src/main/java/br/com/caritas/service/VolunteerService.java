@@ -1,25 +1,25 @@
 package br.com.caritas.service;
 
+import br.com.caritas.dao.VolunteerDAO;
 import br.com.caritas.dto.ApiListDTO;
 import br.com.caritas.dto.PaginationDTO;
-import br.com.caritas.dto.volunteer.VolunteerRequestDTO;
-import br.com.caritas.dto.volunteer.VolunteerResponseDTO;
-import br.com.caritas.dto.volunteer.VolunteerUpdateDTO;
-import br.com.caritas.entity.ParishEntity;
-import br.com.caritas.entity.Roles;
-import br.com.caritas.entity.UserEntity;
-import br.com.caritas.entity.VolunteerEntity;
+import br.com.caritas.dto.user.VolunteerRequestDTO;
+import br.com.caritas.dto.user.VolunteerResponseDTO;
+import br.com.caritas.dto.user.VolunteerUpdateDTO;
+import br.com.caritas.entity.parish.ParishEntity;
+import br.com.caritas.entity.user.Roles;
+import br.com.caritas.entity.user.UserEntity;
+import br.com.caritas.entity.user.VolunteerEntity;
 import br.com.caritas.exception.BusinessRuleException;
 import br.com.caritas.exception.ResourceNotFoundException;
 import io.quarkus.elytron.security.common.BcryptUtil;
-import io.quarkus.hibernate.orm.panache.PanacheQuery;
-import io.quarkus.panache.common.Page;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import org.eclipse.microprofile.jwt.JsonWebToken;
 
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.Set;
 import java.util.UUID;
 
@@ -29,28 +29,28 @@ public class VolunteerService {
     @Inject
     private EmailService emailService;
 
-    public ApiListDTO getAllVolunteersByParishId(int page, int size, Long parishId, JsonWebToken jwt) {
+    @Inject
+    private VolunteerDAO volunteerDAO;
 
+    public ApiListDTO getAllVolunteersByParishId(int page, int size, Long parishId,
+                                                 String search, Boolean active, JsonWebToken jwt) {
         var groups = jwt.getGroups();
 
-        PanacheQuery<VolunteerEntity> query;
-        if (groups.contains(Roles.ADMIN.name())) {
-            query = VolunteerEntity.<VolunteerEntity>find("parish.id = ?1", parishId)
-                    .page(Page.of(page, size));
-        } else {
+        if (!groups.contains(Roles.ADMIN.name())) {
             Long parish = Long.valueOf(jwt.getClaim("parish").toString());
-            if(!parish.equals(parishId)){
+            if (!parish.equals(parishId)) {
                 throw new BusinessRuleException(
                         "You are not allowed to do that.",
                         "A coordinator can only list volunteers from his own parish."
                 );
             }
-            query = VolunteerEntity.<VolunteerEntity>find("parish.id = ?1", parishId)
-                    .page(Page.of(page, size));
         }
+
+        var query = volunteerDAO.findByParish(page, size, parishId, search, active);
 
         var volunteers = query.list()
                 .stream()
+                .sorted(Comparator.comparing(v -> v.name))
                 .map(VolunteerResponseDTO::fromEntity)
                 .toList();
 
@@ -99,25 +99,27 @@ public class VolunteerService {
 
         String token = UUID.randomUUID().toString();
         volunteer.resetToken = BcryptUtil.bcryptHash(token);
-        volunteer.resetTokenExpiresAt = LocalDateTime.now().plusSeconds(15);
+        volunteer.resetTokenExpiresAt = LocalDateTime.now().plusMinutes(15);
 
         if (groups.contains(Roles.COORDINATOR.name())) {
             Long parishId = Long.valueOf(jwt.getClaim("parish").toString());
-            ParishEntity parish = ParishEntity.<ParishEntity>findByIdOptional(parishId)
+            ParishEntity parish = ParishEntity.<ParishEntity>find("id = ?1 and isDiocese = ?2", parishId, Boolean.FALSE)
+                    .firstResultOptional()
                     .orElseThrow(() -> new ResourceNotFoundException(
                             "Parish not found.",
                             "Parish with id " + parishId + " not found."));
             volunteer.parish = parish;
 
         } else if (groups.contains(Roles.ADMIN.name())) {
-            ParishEntity parish = ParishEntity.<ParishEntity>findByIdOptional(req.parishId())
+            ParishEntity parish = ParishEntity.<ParishEntity>find("id = ?1 and isDiocese = ?2", req.parishId(), Boolean.FALSE)
+                    .firstResultOptional()
                     .orElseThrow(() -> new ResourceNotFoundException(
                             "Parish not found.",
                             "Parish with id " + req.parishId() + " not found."));
             volunteer.parish = parish;
         }
 
-        volunteer.active = Boolean.TRUE;
+        volunteer.active = Boolean.FALSE;
         volunteer.persist();
 
         this.emailService.sendWelcomeEmail(
@@ -172,7 +174,8 @@ public class VolunteerService {
     public void activateVolunteer(long id, JsonWebToken jwt) {
         var groups = jwt.getGroups();
 
-        var volunteer = VolunteerEntity.<VolunteerEntity>find("id = ?1 and active = ?2", id, Boolean.FALSE)
+        var volunteer = VolunteerEntity.<VolunteerEntity>find(
+                "id = ?1 and active = ?2 and password is not null", id, Boolean.FALSE)
                 .firstResultOptional()
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "User not found.",

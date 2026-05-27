@@ -1,0 +1,175 @@
+'use client';
+
+import { useEffect } from 'react';
+import type { DonationEntryResponse } from '@/shared/types/donation-entry-response';
+import type { ProductDetailResponse } from '@/shared/types/product-detail-response';
+
+const categoryLabel: Record<string, string> = {
+  CALCA: 'Calça', CAMISETA: 'Camiseta', MOLETOM: 'Moletom', CASACO: 'Casaco',
+  TENIS: 'Tênis', SAPATO: 'Sapato', BOTA: 'Bota', ACESSORIO: 'Acessório', JAQUETA: 'Jaqueta',
+};
+
+const genderLabel: Record<string, string> = {
+  MASCULINO: 'Masculino', FEMININO: 'Feminino', UNISSEX: 'Unissex',
+};
+
+const unitLabel: Record<string, string> = {
+  KG: 'kg', G: 'g', ML: 'mL', L: 'L', UNIDADES: 'unid.',
+};
+
+function formatDateTime(iso: string) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleString('pt-BR', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  });
+}
+
+function formatDate(iso: string) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+function ProductTags({ product }: { product: ProductDetailResponse }) {
+  const parts: string[] = [];
+  if (product.type === 'CLOTHES') {
+    if (product.category) parts.push(`Categoria ${categoryLabel[product.category] ?? product.category}`);
+    if (product.size)     parts.push(`Tamanho ${product.size}`);
+    if (product.gender)   parts.push(`Gênero ${genderLabel[product.gender] ?? product.gender}`);
+    parts.push(product.condition === 'NOVO' ? 'Novo' : 'Usado');
+  } else if (product.type === 'FOOD') {
+    if (product.batch)          parts.push(`Lote ${product.batch}`);
+    if (product.expirationDate) parts.push(`Val. ${formatDate(product.expirationDate)}`);
+  } else {
+    console.error('[ProductTags] tipo de produto desconhecido:', (product as { type: unknown }).type);
+  }
+  if (parts.length === 0) return null;
+  return (
+    <p className="text-[11px] text-slate-400 mt-0.5 leading-tight">{parts.join(' · ')}</p>
+  );
+}
+
+interface Props {
+  entry: DonationEntryResponse | null;
+  onClose: () => void;
+}
+
+export function DonationEntryDrawer({ entry, onClose }: Props) {
+  const isOpen = entry !== null;
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [isOpen, onClose]);
+
+  return (
+    <>
+      <div
+        className={[
+          'fixed inset-0 z-40 bg-black/30 transition-opacity duration-300',
+          isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none',
+        ].join(' ')}
+        onClick={onClose}
+        aria-hidden="true"
+      />
+
+      <div
+        className={[
+          'fixed right-0 top-0 z-50 h-full w-full max-w-md bg-white shadow-2xl',
+          'flex flex-col transition-transform duration-300 ease-in-out',
+          isOpen ? 'translate-x-0' : 'translate-x-full',
+        ].join(' ')}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-200 shrink-0">
+          <div>
+            <h2 className="text-base font-bold text-slate-900">Detalhes da entrada</h2>
+            {entry && (
+              <p className="text-xs text-slate-500 mt-0.5">#{entry.id} · {formatDateTime(entry.date)}</p>
+            )}
+          </div>
+          <button onClick={onClose} aria-label="Fechar"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors duration-150">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+              className="w-5 h-5"><path d="M18 6 6 18M6 6l12 12" /></svg>
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto px-6 py-5">
+          {entry ? (
+            <div className="space-y-6">
+
+              {/* Meta */}
+              <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+                <InfoRow label="Data" value={formatDateTime(entry.date)} />
+                <InfoRow label="Paróquia" value={entry.parish.name} />
+                <InfoRow label="Doador" value={entry.donator || '—'} />
+              </div>
+
+              {entry.observation && (
+                <div className="rounded-xl bg-amber-50 border border-amber-100 px-4 py-3">
+                  <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider mb-1">Observação</p>
+                  <p className="text-sm text-amber-900 leading-relaxed">{entry.observation}</p>
+                </div>
+              )}
+
+              {/* Batches */}
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Itens recebidos</p>
+                  <span className="px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600 text-xs font-bold">
+                    {entry.batches.length}
+                  </span>
+                </div>
+
+                {entry.batches.length === 0 ? (
+                  <p className="text-sm text-slate-400 italic">Nenhum item registrado.</p>
+                ) : (
+                  <div className="space-y-2.5">
+                    {entry.batches.map((batch) => (
+                      <div key={batch.id}
+                        className="rounded-xl border border-slate-200 bg-white overflow-hidden">
+                        <div className="flex items-start justify-between gap-3 px-4 py-3">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-semibold text-slate-800 leading-tight">
+                              {batch.product.name}
+                            </p>
+                            <ProductTags product={batch.product} />
+                          </div>
+                          <div className="shrink-0 flex flex-col items-end">
+                            <span className="text-xl font-bold text-slate-800 leading-none">
+                              {batch.quantity}
+                            </span>
+                            {batch.unit && (
+                              <span className="text-xs font-medium text-slate-400 mt-0.5">
+                                {unitLabel[batch.unit] ?? batch.unit}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </>
+  );
+}
+
+function InfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-0.5">{label}</p>
+      <p className="text-sm font-medium text-slate-800">{value}</p>
+    </div>
+  );
+}
+

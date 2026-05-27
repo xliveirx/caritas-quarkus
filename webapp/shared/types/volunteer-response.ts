@@ -6,4 +6,5 @@ export interface VolunteerResponse {
   createdAt: string;
   updatedAt: string;
   active: boolean;
+  hasPassword: boolean;
 }

@@ -1,13 +1,13 @@
 package br.com.caritas.service;
 
 import br.com.caritas.dto.ApiListDTO;
-import br.com.caritas.dto.coordinator.CoordinatorRequestDTO;
-import br.com.caritas.dto.coordinator.CoordinatorResponseDTO;
 import br.com.caritas.dto.PaginationDTO;
-import br.com.caritas.dto.coordinator.CoordinatorUpdateDTO;
-import br.com.caritas.entity.CoordinatorEntity;
-import br.com.caritas.entity.ParishEntity;
-import br.com.caritas.entity.UserEntity;
+import br.com.caritas.dto.user.CoordinatorRequestDTO;
+import br.com.caritas.dto.user.CoordinatorResponseDTO;
+import br.com.caritas.dto.user.CoordinatorUpdateDTO;
+import br.com.caritas.entity.parish.ParishEntity;
+import br.com.caritas.entity.user.CoordinatorEntity;
+import br.com.caritas.entity.user.UserEntity;
 import br.com.caritas.exception.BusinessRuleException;
 import br.com.caritas.exception.ResourceNotFoundException;
 import io.quarkus.elytron.security.common.BcryptUtil;
@@ -17,6 +17,7 @@ import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.UUID;
 
 
@@ -28,11 +29,13 @@ public class CoordinatorService {
 
     public ApiListDTO getAllCoordinatorsByParish(int page, int size, Long parishId) {
 
-        var query = CoordinatorEntity.<CoordinatorEntity>find("parish.id = ?1", parishId)
+        var query = CoordinatorEntity.<CoordinatorEntity>find(
+                "parish.id = ?1 and parish.isDiocese = ?2", parishId, Boolean.FALSE)
                 .page(Page.of(page, size));
 
         var coordinators = query.list()
                 .stream()
+                .sorted(Comparator.comparing(c -> c.name))
                 .map(CoordinatorResponseDTO::fromEntity)
                 .toList();
 
@@ -67,18 +70,19 @@ public class CoordinatorService {
         coordinator.name = req.name();
         coordinator.email = req.email();
 
-        String token = UUID.randomUUID().toString(); // gera senha aleatória para ser alterada pelo usuario
+        String token = UUID.randomUUID().toString();
         coordinator.resetToken = BcryptUtil.bcryptHash(token);
-        coordinator.resetTokenExpiresAt = LocalDateTime.now().plusMinutes(30);
+        coordinator.resetTokenExpiresAt = LocalDateTime.now().plusMinutes(15);
 
-        ParishEntity parish = ParishEntity.<ParishEntity>findByIdOptional(req.parishId())
+        ParishEntity parish = ParishEntity.<ParishEntity>find("id = ?1 and isDiocese = ?2", req.parishId(), Boolean.FALSE)
+                .firstResultOptional()
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Parish not found.",
                         "Parish not found with id " + req.parishId()));
 
         coordinator.parish = parish;
 
-        coordinator.active = Boolean.TRUE;
+        coordinator.active = Boolean.FALSE;
         coordinator.persist();
 
         this.emailService.sendWelcomeEmail(
@@ -122,7 +126,8 @@ public class CoordinatorService {
 
     @Transactional
     public void activateCoordinator(long id){
-        var coordinator = CoordinatorEntity.<CoordinatorEntity>find("id = ?1 and active = ?2", id, Boolean.FALSE)
+        var coordinator = CoordinatorEntity.<CoordinatorEntity>find(
+                "id = ?1 and active = ?2 and password is not null", id, Boolean.FALSE)
                 .firstResultOptional()
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "User not found.",

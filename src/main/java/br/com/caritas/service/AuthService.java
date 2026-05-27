@@ -1,9 +1,12 @@
 package br.com.caritas.service;
 
-import br.com.caritas.dto.auth.*;
-import br.com.caritas.entity.CoordinatorEntity;
-import br.com.caritas.entity.UserEntity;
-import br.com.caritas.entity.VolunteerEntity;
+import br.com.caritas.dto.user.CredentialsRequestDTO;
+import br.com.caritas.dto.user.ForgotPasswordRequestDTO;
+import br.com.caritas.dto.user.LoginRequestDTO;
+import br.com.caritas.dto.user.LoginResponseDTO;
+import br.com.caritas.entity.user.CoordinatorEntity;
+import br.com.caritas.entity.user.UserEntity;
+import br.com.caritas.entity.user.VolunteerEntity;
 import br.com.caritas.exception.AuthException;
 import br.com.caritas.exception.BusinessRuleException;
 import br.com.caritas.exception.ResourceNotFoundException;
@@ -39,15 +42,16 @@ public class AuthService {
         }
 
         String token = this.tokenService.generateToken(user);
+        String refreshToken = this.tokenService.generateRefreshToken(user);
 
-        return new LoginResponseDTO(token);
+        return new LoginResponseDTO(token, refreshToken);
     }
 
     @Transactional
     public void setCredentials(CredentialsRequestDTO req) {
 
         UserEntity user = UserEntity.<UserEntity>find(
-                "email = ?1 and active =?2", req.email(), Boolean.TRUE)
+                "email = ?1", req.email())
                         .firstResultOptional()
                                 .orElseThrow(() -> new ResourceNotFoundException(
                                         "User not found.",
@@ -78,6 +82,7 @@ public class AuthService {
         }
 
         user.password = BcryptUtil.bcryptHash(req.password());
+        user.active = Boolean.TRUE;
         user.resetToken = null;
         user.resetTokenExpiresAt = null;
     }
@@ -87,7 +92,7 @@ public class AuthService {
     public void resendSetupToken(String email) {
 
         UserEntity user = UserEntity.<UserEntity>find(
-                        "email = ?1 and active = ?2 and password IS NULL", email, Boolean.TRUE)
+                        "email = ?1 and password IS NULL", email)
                 .firstResultOptional()
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "User not found.",
@@ -95,7 +100,7 @@ public class AuthService {
 
         String token = UUID.randomUUID().toString();
         user.resetToken = BcryptUtil.bcryptHash(token);
-        user.resetTokenExpiresAt = LocalDateTime.now().plusMinutes(30);
+        user.resetTokenExpiresAt = LocalDateTime.now().plusMinutes(15);
         user.persist();
 
         String parishName = resolveParishName(user);

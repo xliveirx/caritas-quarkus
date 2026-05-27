@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/contexts/toast-context';
 import { api } from '@/services/api';
@@ -9,12 +9,16 @@ import { SkeletonRow } from '@/components/ui/skeleton-row';
 import { Pagination } from '@/components/ui/pagination';
 import { ConfirmDeleteModal } from '@/components/ui/confirm-delete-modal';
 import { ErrorState } from '@/components/ui/error-state';
+import { SearchBar } from '@/components/ui/search-bar';
+import { FilterDropdown } from '@/components/ui/filter-dropdown';
 import { formatCPF, formatCurrency } from '@/shared/utils/formatters';
 import type { FamilyResponse } from '@/shared/types/family-response';
 import type { ParishResponse } from '@/shared/types/parish-response';
 import type { PaginatedResponse } from '@/shared/types/paginated-response';
 import type { ApiErrorResponse } from '@/shared/types/api-error-response';
 import { SITUATION_LABELS, type Situation } from '@/shared/types/situation';
+
+const SITUATIONS: Situation[] = ['RISCO_BAIXO', 'RISCO_MEDIO', 'RISCO_ALTO', 'POBREZA_EXTREMA', 'EMERGENCIA_SOCIAL'];
 
 const PAGE_SIZE = 10;
 
@@ -54,6 +58,16 @@ export default function FamiliasPage() {
   const [page, setPage]                   = useState(0);
   const [isLoading, setIsLoading]         = useState(true);
   const [fetchError, setFetchError]       = useState<{ title: string; message?: string } | null>(null);
+  const [searchInput, setSearchInput]         = useState('');
+  const [search, setSearch]                   = useState('');
+  const [draftSituation, setDraftSituation]   = useState<Situation | ''>('');
+  const [draftMinIncome, setDraftMinIncome]   = useState('');
+  const [draftMaxIncome, setDraftMaxIncome]   = useState('');
+  const [draftBolsaFamilia, setDraftBolsaFamilia] = useState('');
+  const [situation, setSituation]             = useState<Situation | ''>('');
+  const [minIncome, setMinIncome]             = useState('');
+  const [maxIncome, setMaxIncome]             = useState('');
+  const [bolsaFamilia, setBolsaFamilia]       = useState('');
   const [parishes, setParishes]           = useState<ParishResponse[]>([]);
   const [modalOpen, setModalOpen]         = useState(false);
   const [editFamily, setEditFamily]       = useState<FamilyResponse | undefined>(undefined);
@@ -65,7 +79,7 @@ export default function FamiliasPage() {
   useEffect(() => {
     if (!isAdmin || !token) return;
     api.get<PaginatedResponse<ParishResponse>>('/api/v1/parishes?page=0&size=100', token)
-      .then((data) => setParishes(data.data))
+      .then((data) => setParishes(data.data.filter((p) => !p.isDiocese)))
       .catch(() => {});
   }, [isAdmin, token]);
 
@@ -76,8 +90,14 @@ export default function FamiliasPage() {
       setIsLoading(true);
       setFetchError(null);
       try {
+        const qs = new URLSearchParams({ page: String(currentPage), size: String(PAGE_SIZE) });
+        if (search.trim()) qs.set('search', search.trim());
+        if (situation) qs.set('situation', situation);
+        if (minIncome) qs.set('minIncome', minIncome);
+        if (maxIncome) qs.set('maxIncome', maxIncome);
+        if (bolsaFamilia) qs.set('bolsaFamilia', bolsaFamilia);
         const data = await api.get<PaginatedResponse<FamilyResponse>>(
-          `/api/v1/families?page=${currentPage}&size=${PAGE_SIZE}`,
+          `/api/v1/families?${qs.toString()}`,
           token
         );
         setFamilies(data.data);
@@ -93,7 +113,7 @@ export default function FamiliasPage() {
         setIsLoading(false);
       }
     },
-    [token]
+    [token, search, situation, minIncome, maxIncome, bolsaFamilia]
   );
 
   useEffect(() => { fetchFamilies(page); }, [fetchFamilies, page]);
@@ -148,6 +168,42 @@ export default function FamiliasPage() {
     setEditFamily(undefined);
   }
 
+  /* ── Search / filter submit ────────────────────────────────────── */
+  function submitSearch() {
+    setSearch(searchInput.trim());
+    setSituation(draftSituation);
+    setMinIncome(draftMinIncome);
+    setMaxIncome(draftMaxIncome);
+    setBolsaFamilia(draftBolsaFamilia);
+    setPage(0);
+  }
+
+  function clearFilters() {
+    setSearchInput(''); setSearch('');
+    setDraftSituation(''); setSituation('');
+    setDraftMinIncome(''); setMinIncome('');
+    setDraftMaxIncome(''); setMaxIncome('');
+    setDraftBolsaFamilia(''); setBolsaFamilia('');
+    setPage(0);
+  }
+
+  const hasDraftFilters =
+    draftSituation !== '' || draftMinIncome !== '' ||
+    draftMaxIncome !== '' || draftBolsaFamilia !== '';
+
+  const [openDropdown, setOpenDropdown] = useState<'situation' | 'bolsaFamilia' | null>(null);
+  const filterRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!openDropdown) return;
+    function onMouseDown(e: MouseEvent) {
+      if (filterRef.current && !filterRef.current.contains(e.target as Node))
+        setOpenDropdown(null);
+    }
+    document.addEventListener('mousedown', onMouseDown);
+    return () => document.removeEventListener('mousedown', onMouseDown);
+  }, [openDropdown]);
+
   /* ── Error state ────────────────────────────────────────────────── */
   if (!isLoading && fetchError) {
     return (
@@ -192,6 +248,62 @@ export default function FamiliasPage() {
               </svg>
               Nova família
             </button>
+          </div>
+        </div>
+
+        {/* Search + filters */}
+        <div className="mb-4 space-y-2.5">
+          <SearchBar
+            value={searchInput}
+            onChange={setSearchInput}
+            onSubmit={submitSearch}
+            placeholder="Buscar por nome, CPF, nome da mãe..."
+          />
+          <div ref={filterRef} className="flex flex-wrap items-center gap-2">
+            <FilterDropdown
+              label="Situação"
+              value={draftSituation}
+              options={[{ value: '', label: 'Todas' }, ...SITUATIONS.map((s) => ({ value: s, label: SITUATION_LABELS[s] }))]}
+              isOpen={openDropdown === 'situation'}
+              onToggle={() => setOpenDropdown(openDropdown === 'situation' ? null : 'situation')}
+              onSelect={(v) => { setDraftSituation(v as Situation | ''); setOpenDropdown(null); }}
+              minWidth="190px"
+            />
+            <FilterDropdown
+              label="Bolsa Família"
+              value={draftBolsaFamilia}
+              options={[{ value: '', label: 'Todos' }, { value: 'true', label: 'Sim' }, { value: 'false', label: 'Não' }]}
+              isOpen={openDropdown === 'bolsaFamilia'}
+              onToggle={() => setOpenDropdown(openDropdown === 'bolsaFamilia' ? null : 'bolsaFamilia')}
+              onSelect={(v) => { setDraftBolsaFamilia(v); setOpenDropdown(null); }}
+            />
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-medium text-slate-500 shrink-0">Renda:</span>
+              <input type="number" min={0} placeholder="Mín"
+                value={draftMinIncome}
+                onChange={(e) => setDraftMinIncome(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') submitSearch(); }}
+                className="w-24 px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg
+                  placeholder-slate-400 text-slate-800
+                  focus:outline-none focus:ring-2 focus:ring-wine-700/30 focus:border-wine-700
+                  transition-colors duration-150" />
+              <span className="text-slate-400 text-xs">—</span>
+              <input type="number" min={0} placeholder="Máx"
+                value={draftMaxIncome}
+                onChange={(e) => setDraftMaxIncome(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') submitSearch(); }}
+                className="w-24 px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg
+                  placeholder-slate-400 text-slate-800
+                  focus:outline-none focus:ring-2 focus:ring-wine-700/30 focus:border-wine-700
+                  transition-colors duration-150" />
+            </div>
+            {(hasDraftFilters || searchInput) && (
+              <button type="button" onClick={clearFilters}
+                className="text-xs font-semibold text-slate-400 hover:text-slate-600
+                  transition-colors duration-150 underline underline-offset-2">
+                Limpar tudo
+              </button>
+            )}
           </div>
         </div>
 

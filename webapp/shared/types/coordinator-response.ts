@@ -6,4 +6,5 @@ export interface CoordinatorResponse {
   createdAt: string;
   updatedAt: string;
   active: boolean;
+  hasPassword: boolean;
 }

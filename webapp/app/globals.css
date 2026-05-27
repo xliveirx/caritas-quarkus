@@ -33,3 +33,11 @@ body {
 * {
   box-sizing: border-box;
 }
+
+button, [role="button"], select, label[for], summary {
+  cursor: pointer;
+}
+
+button:disabled, [role="button"][aria-disabled="true"], select:disabled {
+  cursor: not-allowed;
+}

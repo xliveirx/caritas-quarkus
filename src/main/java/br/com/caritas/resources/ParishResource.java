@@ -20,9 +20,10 @@ public class ParishResource {
     @GET
     @RolesAllowed("ADMIN")
     public Response getAllParishes(@QueryParam("page") @DefaultValue("0") int page,
-                                   @QueryParam("size") @DefaultValue("10") int size) {
+                                   @QueryParam("size") @DefaultValue("10") int size,
+                                   @QueryParam("search") String search) {
 
-        var parishes = this.parishService.getAllParishes(page, size);
+        var parishes = this.parishService.getAllParishes(page, size, search);
 
         return Response.ok(parishes).build();
     }

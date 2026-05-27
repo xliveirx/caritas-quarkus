@@ -1,7 +1,7 @@
 package br.com.caritas.resources;
 
-import br.com.caritas.dto.volunteer.VolunteerRequestDTO;
-import br.com.caritas.dto.volunteer.VolunteerUpdateDTO;
+import br.com.caritas.dto.user.VolunteerRequestDTO;
+import br.com.caritas.dto.user.VolunteerUpdateDTO;
 import br.com.caritas.service.VolunteerService;
 import jakarta.annotation.Resource;
 import jakarta.annotation.security.RolesAllowed;
@@ -27,9 +27,11 @@ public class VolunteerResource {
     @Path("/parish/{parishId}")
     public Response getAllVolunteersByParishId(@QueryParam("page") @DefaultValue("0") int page,
                                                @QueryParam("size") @DefaultValue("10") int size,
-                                               @PathParam("parishId") Long parishId) {
+                                               @PathParam("parishId") Long parishId,
+                                               @QueryParam("search") String search,
+                                               @QueryParam("active") Boolean active) {
 
-        var volunteers = this.volunteerService.getAllVolunteersByParishId(page, size, parishId, jwt);
+        var volunteers = this.volunteerService.getAllVolunteersByParishId(page, size, parishId, search, active, jwt);
 
         return Response.ok(volunteers).build();
     }

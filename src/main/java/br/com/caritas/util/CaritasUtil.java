@@ -58,8 +58,4 @@ public class CaritasUtil {
                 && Character.getNumericValue(cpf.charAt(10)) == digit2;
     }
 
-    public static boolean isFutureDate(LocalDate date) {
-        if (date == null) return false;
-        return date.isAfter(LocalDate.now());
-    }
 }

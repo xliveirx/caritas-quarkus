@@ -1,7 +1,8 @@
 package br.com.caritas.resources;
 
-import br.com.caritas.dto.auth.*;
+import br.com.caritas.dto.user.*;
 import br.com.caritas.service.AuthService;
+import br.com.caritas.service.TokenService;
 import jakarta.annotation.Resource;
 import jakarta.annotation.security.PermitAll;
 import jakarta.inject.Inject;
@@ -17,6 +18,9 @@ public class AuthResource {
     @Inject
     private AuthService authService;
 
+    @Inject
+    private TokenService tokenService;
+
     @POST
     @PermitAll
     @Path("/login")
@@ -25,6 +29,17 @@ public class AuthResource {
         var token = this.authService.login(req);
 
         return Response.ok(token).build();
+    }
+
+    @POST
+    @PermitAll
+    @Path("/refresh")
+    public Response refresh(RefreshRequestDTO req) {
+
+        var newAccessToken = this.tokenService.refresh(req.refreshToken());
+
+        return Response.ok(new RefreshResponseDTO(newAccessToken)).build();
+
     }
 
     @POST

@@ -1,7 +1,7 @@
 package br.com.caritas.resources;
 
-import br.com.caritas.dto.coordinator.CoordinatorRequestDTO;
-import br.com.caritas.dto.coordinator.CoordinatorUpdateDTO;
+import br.com.caritas.dto.user.CoordinatorRequestDTO;
+import br.com.caritas.dto.user.CoordinatorUpdateDTO;
 import br.com.caritas.service.CoordinatorService;
 import jakarta.annotation.Resource;
 import jakarta.annotation.security.RolesAllowed;

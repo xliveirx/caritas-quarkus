@@ -69,6 +69,18 @@ function VisitsIcon() {
   );
 }
 
+function CestasIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"
+      className="w-[18px] h-[18px] shrink-0">
+      <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
+      <line x1="3" y1="6" x2="21" y2="6"/>
+      <path d="M16 10a4 4 0 01-8 0"/>
+    </svg>
+  );
+}
+
 function BazarIcon() {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
@@ -150,6 +162,12 @@ const NAV_ITEMS: NavItem[] = [
     href: '/estoque',
     label: 'Estoque',
     icon: StockIcon,
+    roles: ['ADMIN', 'COORDINATOR', 'VOLUNTEER'],
+  },
+  {
+    href: '/cestas',
+    label: 'Cestas Básicas',
+    icon: CestasIcon,
     roles: ['ADMIN', 'COORDINATOR', 'VOLUNTEER'],
   },
   {
