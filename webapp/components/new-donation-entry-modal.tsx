@@ -57,15 +57,6 @@ interface Props {
 
 /* ─── Helpers ────────────────────────────────────────────────────── */
 
-function Tag({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium
-      bg-slate-100 text-slate-500 ring-1 ring-slate-200">
-      {children}
-    </span>
-  );
-}
-
 function formatExpiration(dateStr: string): string {
   try {
     return new Date(dateStr + 'T00:00:00')
@@ -73,6 +64,25 @@ function formatExpiration(dateStr: string): string {
   } catch {
     return dateStr;
   }
+}
+
+function ClothesProductDetails({ p }: { p: ClothesDetailResponse }) {
+  const parts: string[] = [];
+  if (p.category)  parts.push(`Categoria ${CATEGORY_LABELS[p.category] ?? p.category}`);
+  if (p.size)      parts.push(`Tamanho ${p.size}`);
+  if (p.gender)    parts.push(GENDER_LABELS[p.gender] ?? p.gender);
+  if (p.condition) parts.push(CONDITION_LABELS[p.condition] ?? p.condition);
+  if (parts.length === 0) return null;
+  return <p className="text-[11px] text-slate-400 mt-0.5 leading-tight">{parts.join(' · ')}</p>;
+}
+
+function FoodProductDetails({ p }: { p: FoodDetailResponse }) {
+  const parts: string[] = [];
+  if (p.batch)          parts.push(`Lote ${p.batch}`);
+  if (p.expirationDate) parts.push(`Val. ${formatExpiration(p.expirationDate)}`);
+  if (p.defaultUnit)    parts.push(UNIT_LABELS[p.defaultUnit] ?? p.defaultUnit);
+  if (parts.length === 0) return null;
+  return <p className="text-[11px] text-slate-400 mt-0.5 leading-tight">{parts.join(' · ')}</p>;
 }
 
 /* ─── Product Picker ─────────────────────────────────────────────── */
@@ -190,13 +200,8 @@ function ProductPicker({
                           : 'border-transparent hover:bg-slate-50',
                       ].join(' ')}
                     >
-                      <p className="text-sm font-medium text-slate-800 leading-tight mb-1.5">{p.name}</p>
-                      <div className="flex flex-wrap gap-1">
-                        {p.size      && <Tag>Tam: {p.size}</Tag>}
-                        {p.category  && <Tag>Categoria: {CATEGORY_LABELS[p.category] ?? p.category}</Tag>}
-                        {p.gender    && <Tag>Gênero: {GENDER_LABELS[p.gender] ?? p.gender}</Tag>}
-                        {p.condition && <Tag>Cond: {CONDITION_LABELS[p.condition]}</Tag>}
-                      </div>
+                      <p className="text-sm font-medium text-slate-800 leading-tight">{p.name}</p>
+                      <ClothesProductDetails p={p} />
                     </button>
                   );
                 })
@@ -222,12 +227,8 @@ function ProductPicker({
                           : 'border-transparent hover:bg-slate-50',
                       ].join(' ')}
                     >
-                      <p className="text-sm font-medium text-slate-800 leading-tight mb-1.5">{p.name}</p>
-                      <div className="flex flex-wrap gap-1">
-                        {p.batch          && <Tag>Lote: {p.batch}</Tag>}
-                        {p.expirationDate && <Tag>Val: {formatExpiration(p.expirationDate)}</Tag>}
-                        {p.defaultUnit    && <Tag>Unidade: {UNIT_LABELS[p.defaultUnit] ?? p.defaultUnit}</Tag>}
-                      </div>
+                      <p className="text-sm font-medium text-slate-800 leading-tight">{p.name}</p>
+                      <FoodProductDetails p={p} />
                     </button>
                   );
                 })

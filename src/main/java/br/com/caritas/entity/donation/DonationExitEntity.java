@@ -25,7 +25,7 @@ public class DonationExitEntity extends PanacheEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
-    public Status status;
+    public DonationStatus status;
 
     @ManyToOne
     @JoinColumn(name = "family_id")

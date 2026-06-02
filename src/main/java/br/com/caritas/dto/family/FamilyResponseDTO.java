@@ -10,6 +10,7 @@ import java.util.List;
 public record FamilyResponseDTO(
         Long id,
         List<FamilyMemberResponseDTO> members,
+        Long parishId,
         BigDecimal monthlyIncome,
         Boolean bolsaFamilia,
         Situation situation,
@@ -20,6 +21,7 @@ public record FamilyResponseDTO(
         return new FamilyResponseDTO(
                 entity.id,
                 FamilyMemberResponseDTO.fromEntity(entity.members),
+                entity.parish.id,
                 entity.monthlyIncome,
                 entity.bolsaFamilia,
                 entity.situation,

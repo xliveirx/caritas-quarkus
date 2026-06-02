@@ -3,7 +3,7 @@ package br.com.caritas.dto.donation;
 import br.com.caritas.dto.family.FamilyResponseDTO;
 import br.com.caritas.dto.parish.ParishResponseDTO;
 import br.com.caritas.entity.donation.DonationExitEntity;
-import br.com.caritas.entity.donation.Status;
+import br.com.caritas.entity.donation.DonationStatus;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -13,7 +13,7 @@ public record DonationExitResponseDTO(
         LocalDateTime date,
         String observation,
         ParishResponseDTO parish,
-        Status status,
+        DonationStatus status,
         FamilyResponseDTO family,
         List<ExitBatchResponseDTO> batches,
         KitResponseDTO kit

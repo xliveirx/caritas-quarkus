@@ -27,13 +27,13 @@ public class DonationEntryService {
     @Inject
     private DonationEntryDAO donationEntryDAO;
 
-    public ApiListDTO getAllDonationEntries(int page, int size, String search, Status status, JsonWebToken jwt) {
+    public ApiListDTO getAllDonationEntries(int page, int size, String search, DonationStatus donationStatus, JsonWebToken jwt) {
 
         var groups = jwt.getGroups();
         Long parishId = groups.contains(Roles.ADMIN.name()) ? null
                 : Long.valueOf(jwt.getClaim("parish").toString());
 
-        var query = donationEntryDAO.findAll(page, size, parishId, search, status);
+        var query = donationEntryDAO.findAll(page, size, parishId, search, donationStatus);
 
         var donations = query.list()
                 .stream()
@@ -54,7 +54,7 @@ public class DonationEntryService {
         donation.donator = req.donator();
         donation.observation = req.observation();
         donation.date = LocalDateTime.now();
-        donation.status = Status.CONFIRMED;
+        donation.status = DonationStatus.CONFIRMED;
 
         var groups = jwt.getGroups();
         Long parishId;
@@ -93,6 +93,7 @@ public class DonationEntryService {
             entry.quantity = batch.quantity();
             entry.product = product;
             entry.donationEntry = donation;
+            donation.batches.add(entry);
             entry.persist();
 
             StockItemEntity stockItem = StockItemEntity.<StockItemEntity>find(
@@ -122,7 +123,7 @@ public class DonationEntryService {
         
         if(groups.contains(Roles.ADMIN.name())) {
             donation = DonationEntryEntity.<DonationEntryEntity>find(
-                            "id = ?1 and status = ?2", id, Status.CONFIRMED)
+                            "id = ?1 and donationStatus = ?2", id, DonationStatus.CONFIRMED)
                     .firstResultOptional()
                     .orElseThrow(() -> new ResourceNotFoundException(
                             "Donation not found.",
@@ -132,7 +133,7 @@ public class DonationEntryService {
             Long parishId = Long.valueOf(jwt.getClaim("parish").toString());
 
             donation = DonationEntryEntity.<DonationEntryEntity>find(
-                            "id = ?1 and status = ?2 and parish.id = ?3", id, Status.CONFIRMED, parishId)
+                            "id = ?1 and donationStatus = ?2 and parish.id = ?3", id, DonationStatus.CONFIRMED, parishId)
                     .firstResultOptional()
                     .orElseThrow(() -> new ResourceNotFoundException(
                             "Donation not found.",
@@ -155,7 +156,7 @@ public class DonationEntryService {
             stockItem.persist();
         });
 
-        donation.status = Status.CANCELED;
+        donation.status = DonationStatus.CANCELED;
         donation.persist();
     }
 }

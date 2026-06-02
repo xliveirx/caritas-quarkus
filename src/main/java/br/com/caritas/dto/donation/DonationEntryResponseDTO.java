@@ -2,7 +2,7 @@ package br.com.caritas.dto.donation;
 
 import br.com.caritas.dto.parish.ParishResponseDTO;
 import br.com.caritas.entity.donation.DonationEntryEntity;
-import br.com.caritas.entity.donation.Status;
+import br.com.caritas.entity.donation.DonationStatus;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -12,7 +12,7 @@ public record DonationEntryResponseDTO(
         LocalDateTime date,
         String donator,
         String observation,
-        Status status,
+        DonationStatus status,
         ParishResponseDTO parish,
         List<EntryBatchResponseDTO> batches
 ) {

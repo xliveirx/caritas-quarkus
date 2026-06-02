@@ -3,3 +3,9 @@
 !target/*-runner.jar
 !target/lib/*
 !target/quarkus-app/*
+
+# Liberar para build dentro do container
+!pom.xml
+!src/**
+!.mvn/**
+!mvnw

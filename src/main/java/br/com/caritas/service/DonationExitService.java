@@ -11,7 +11,6 @@ import br.com.caritas.entity.parish.ParishEntity;
 import br.com.caritas.entity.user.Roles;
 import br.com.caritas.exception.BusinessRuleException;
 import br.com.caritas.exception.ResourceNotFoundException;
-import br.com.caritas.util.UnitConverter;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -27,13 +26,13 @@ public class DonationExitService {
     private DonationExitDAO donationExitDAO;
 
     @Transactional
-    public ApiListDTO getAllDonationExits(int page, int size, String search, Status status, JsonWebToken jwt) {
+    public ApiListDTO getAllDonationExits(int page, int size, String search, DonationStatus donationStatus, JsonWebToken jwt) {
 
         var groups = jwt.getGroups();
         Long parishId = groups.contains(Roles.ADMIN.name()) ? null
                 : Long.valueOf(jwt.getClaim("parish").toString());
 
-        var query = donationExitDAO.findAll(page, size, parishId, search, status);
+        var query = donationExitDAO.findAll(page, size, parishId, search, donationStatus);
 
         var donations = query.list()
                 .stream()
@@ -54,7 +53,7 @@ public class DonationExitService {
         DonationExitEntity donation = new DonationExitEntity();
         donation.date = LocalDateTime.now();
         donation.observation = req.observation();
-        donation.status = Status.CONFIRMED;
+        donation.status = DonationStatus.CONFIRMED;
 
         ParishEntity parish;
         FamilyEntity family;
@@ -145,7 +144,7 @@ public class DonationExitService {
 
         if(groups.contains(Roles.ADMIN.name())) {
 
-            donation = DonationExitEntity.<DonationExitEntity>find("id = ?1 and status = ?2", id, Status.CONFIRMED)
+            donation = DonationExitEntity.<DonationExitEntity>find("id = ?1 and status = ?2", id, DonationStatus.CONFIRMED)
                     .firstResultOptional()
                     .orElseThrow(() -> new ResourceNotFoundException(
                             "Donation not found.",
@@ -155,7 +154,7 @@ public class DonationExitService {
 
             Long parishId = Long.valueOf(jwt.getClaim("parish").toString());
             donation = DonationExitEntity.<DonationExitEntity>find(
-                    "id = ?1 and status = ?2 and parish.id = ?3", id, Status.CONFIRMED, parishId)
+                    "id = ?1 and status = ?2 and parish.id = ?3", id, DonationStatus.CONFIRMED, parishId)
                     .firstResultOptional()
                     .orElseThrow(() -> new ResourceNotFoundException(
                             "Donation not found.",
@@ -175,7 +174,7 @@ public class DonationExitService {
             stockItem.persist();
         });
 
-        donation.status = Status.CANCELED;
+        donation.status = DonationStatus.CANCELED;
         donation.persist();
     }
 }

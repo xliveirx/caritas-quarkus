@@ -27,15 +27,16 @@ public class FamilyResource {
     @GET
     @Authenticated
     public Response getAllFamilies(@QueryParam("page") @DefaultValue("0") int page,
-                                   @QueryParam("size") @DefaultValue("10") int size,
-                                   @QueryParam("search") String search,
-                                   @QueryParam("situation") Situation situation,
-                                   @QueryParam("minIncome") BigDecimal minIncome,
-                                   @QueryParam("maxIncome") BigDecimal maxIncome,
-                                   @QueryParam("bolsaFamilia") Boolean bolsaFamilia) {
+                                             @QueryParam("size") @DefaultValue("10") int size,
+                                             @QueryParam("search") String search,
+                                             @QueryParam("parishId") Long parishId,
+                                             @QueryParam("situation") Situation situation,
+                                             @QueryParam("minIncome") BigDecimal minIncome,
+                                             @QueryParam("maxIncome") BigDecimal maxIncome,
+                                             @QueryParam("bolsaFamilia") Boolean bolsaFamilia) {
 
         var families = this.familyService.getAllFamilies(
-                page, size, search, situation, minIncome, maxIncome, bolsaFamilia, jwt
+                page, size, search, parishId, situation, minIncome, maxIncome, bolsaFamilia, jwt
         );
 
         return Response.ok(families).build();

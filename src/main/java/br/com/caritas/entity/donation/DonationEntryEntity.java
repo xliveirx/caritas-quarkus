@@ -3,10 +3,9 @@ package br.com.caritas.entity.donation;
 import br.com.caritas.entity.parish.ParishEntity;
 import io.quarkus.hibernate.orm.panache.PanacheEntity;
 import jakarta.persistence.*;
-import org.hibernate.annotations.CreationTimestamp;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -24,12 +23,12 @@ public class DonationEntryEntity extends PanacheEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
-    public Status status;
+    public DonationStatus status;
 
     @ManyToOne
     @JoinColumn(name = "parish_id", nullable = false)
     public ParishEntity parish;
 
     @OneToMany(mappedBy = "donationEntry", cascade = CascadeType.ALL, orphanRemoval = true)
-    public List<EntryBatchEntity> batches;
+    public List<EntryBatchEntity> batches = new ArrayList<>();
 }

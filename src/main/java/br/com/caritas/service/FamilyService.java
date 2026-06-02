@@ -32,12 +32,11 @@ public class FamilyService {
     private FamilyDAO familyDAO;
 
     public ApiListDTO getAllFamilies(int page, int size, String search,
-                                     Situation situation,
-                                     BigDecimal minIncome, BigDecimal maxIncome,
-                                     Boolean bolsaFamilia,
-                                     JsonWebToken jwt) {
+                                               Long parishId, Situation situation,
+                                               BigDecimal minIncome, BigDecimal maxIncome,
+                                               Boolean bolsaFamilia,
+                                               JsonWebToken jwt) {
         var groups = jwt.getGroups();
-        Long parishId = null;
         if (groups.contains(Roles.COORDINATOR.name()) || groups.contains(Roles.VOLUNTEER.name())) {
             parishId = Long.valueOf(jwt.getClaim("parish").toString());
         }

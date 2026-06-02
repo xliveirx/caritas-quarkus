@@ -1,7 +1,7 @@
 package br.com.caritas.resources;
 
 import br.com.caritas.dto.donation.DonationEntryRequestDTO;
-import br.com.caritas.entity.donation.Status;
+import br.com.caritas.entity.donation.DonationStatus;
 import br.com.caritas.service.DonationEntryService;
 import io.quarkus.security.Authenticated;
 import jakarta.annotation.Resource;
@@ -25,9 +25,9 @@ public class DonationEntryResource {
     public Response getAllDonationEntries(@QueryParam("page") @DefaultValue("0") int page,
                                           @QueryParam("size") @DefaultValue("10") int size,
                                           @QueryParam("search") String search,
-                                          @QueryParam("status") Status status) {
+                                          @QueryParam("status") DonationStatus donationStatus) {
 
-        var donations = this.donationEntryService.getAllDonationEntries(page, size, search, status, jwt);
+        var donations = this.donationEntryService.getAllDonationEntries(page, size, search, donationStatus, jwt);
 
         return Response.ok(donations).build();
     }

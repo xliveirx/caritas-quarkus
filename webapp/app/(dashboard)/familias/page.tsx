@@ -64,10 +64,12 @@ export default function FamiliasPage() {
   const [draftMinIncome, setDraftMinIncome]   = useState('');
   const [draftMaxIncome, setDraftMaxIncome]   = useState('');
   const [draftBolsaFamilia, setDraftBolsaFamilia] = useState('');
+  const [draftParish, setDraftParish]         = useState('');
   const [situation, setSituation]             = useState<Situation | ''>('');
   const [minIncome, setMinIncome]             = useState('');
   const [maxIncome, setMaxIncome]             = useState('');
   const [bolsaFamilia, setBolsaFamilia]       = useState('');
+  const [parish, setParish]                   = useState('');
   const [parishes, setParishes]           = useState<ParishResponse[]>([]);
   const [modalOpen, setModalOpen]         = useState(false);
   const [editFamily, setEditFamily]       = useState<FamilyResponse | undefined>(undefined);
@@ -75,7 +77,7 @@ export default function FamiliasPage() {
   const [familyToDelete, setFamilyToDelete] = useState<FamilyResponse | null>(null);
   const [isDeleting, setIsDeleting]       = useState(false);
 
-  /* ── Fetch parishes for ADMIN create ────────────────────────────── */
+  /* ── Fetch parishes for ADMIN ───────────────────────────────────── */
   useEffect(() => {
     if (!isAdmin || !token) return;
     api.get<PaginatedResponse<ParishResponse>>('/api/v1/parishes?page=0&size=100', token)
@@ -96,6 +98,7 @@ export default function FamiliasPage() {
         if (minIncome) qs.set('minIncome', minIncome);
         if (maxIncome) qs.set('maxIncome', maxIncome);
         if (bolsaFamilia) qs.set('bolsaFamilia', bolsaFamilia);
+        if (parish) qs.set('parishId', parish);
         const data = await api.get<PaginatedResponse<FamilyResponse>>(
           `/api/v1/families?${qs.toString()}`,
           token
@@ -113,7 +116,7 @@ export default function FamiliasPage() {
         setIsLoading(false);
       }
     },
-    [token, search, situation, minIncome, maxIncome, bolsaFamilia]
+    [token, search, situation, minIncome, maxIncome, bolsaFamilia, parish]
   );
 
   useEffect(() => { fetchFamilies(page); }, [fetchFamilies, page]);
@@ -175,6 +178,7 @@ export default function FamiliasPage() {
     setMinIncome(draftMinIncome);
     setMaxIncome(draftMaxIncome);
     setBolsaFamilia(draftBolsaFamilia);
+    setParish(draftParish);
     setPage(0);
   }
 
@@ -184,14 +188,16 @@ export default function FamiliasPage() {
     setDraftMinIncome(''); setMinIncome('');
     setDraftMaxIncome(''); setMaxIncome('');
     setDraftBolsaFamilia(''); setBolsaFamilia('');
+    setDraftParish(''); setParish('');
     setPage(0);
   }
 
   const hasDraftFilters =
     draftSituation !== '' || draftMinIncome !== '' ||
-    draftMaxIncome !== '' || draftBolsaFamilia !== '';
+    draftMaxIncome !== '' || draftBolsaFamilia !== '' ||
+    draftParish !== '';
 
-  const [openDropdown, setOpenDropdown] = useState<'situation' | 'bolsaFamilia' | null>(null);
+  const [openDropdown, setOpenDropdown] = useState<'situation' | 'bolsaFamilia' | 'parish' | null>(null);
   const filterRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -277,6 +283,17 @@ export default function FamiliasPage() {
               onToggle={() => setOpenDropdown(openDropdown === 'bolsaFamilia' ? null : 'bolsaFamilia')}
               onSelect={(v) => { setDraftBolsaFamilia(v); setOpenDropdown(null); }}
             />
+            {isAdmin && parishes.length > 0 && (
+              <FilterDropdown
+                label="Paróquia"
+                value={draftParish}
+                options={[{ value: '', label: 'Todas' }, ...parishes.map((p) => ({ value: String(p.id), label: p.name }))]}
+                isOpen={openDropdown === 'parish'}
+                onToggle={() => setOpenDropdown(openDropdown === 'parish' ? null : 'parish')}
+                onSelect={(v) => { setDraftParish(v); setOpenDropdown(null); }}
+                minWidth="220px"
+              />
+            )}
             <div className="flex items-center gap-1.5">
               <span className="text-xs font-medium text-slate-500 shrink-0">Renda:</span>
               <input type="number" min={0} placeholder="Mín"

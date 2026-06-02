@@ -1,7 +1,7 @@
 package br.com.caritas.dao;
 
 import br.com.caritas.entity.donation.DonationExitEntity;
-import br.com.caritas.entity.donation.Status;
+import br.com.caritas.entity.donation.DonationStatus;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
@@ -16,7 +16,7 @@ import java.util.Map;
 public class DonationExitDAO {
 
     public PanacheQuery<DonationExitEntity> findAll(int page, int size, Long parishId,
-                                                     String search, Status status) {
+                                                     String search, DonationStatus donationStatus) {
         Map<String, Object> params = new HashMap<>();
         List<String> conditions = new ArrayList<>();
 
@@ -34,9 +34,9 @@ public class DonationExitDAO {
             params.put("pattern", pattern);
         }
 
-        if (status != null) {
+        if (donationStatus != null) {
             conditions.add("status = :status");
-            params.put("status", status);
+            params.put("status", donationStatus);
         }
 
         if (conditions.isEmpty()) {

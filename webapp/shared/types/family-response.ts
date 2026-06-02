@@ -4,6 +4,7 @@ import type { AddressResponse } from './address-response';
 
 export interface FamilyResponse {
   id: number;
+  parishId: number;
   members: FamilyMemberResponse[];
   monthlyIncome: number;
   bolsaFamilia: boolean;

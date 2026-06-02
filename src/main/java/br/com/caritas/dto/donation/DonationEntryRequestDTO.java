@@ -1,11 +1,14 @@
 package br.com.caritas.dto.donation;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+
 import java.util.List;
 
 public record DonationEntryRequestDTO(
-        String donator,
+        @NotBlank String donator,
         String observation,
         Long parishId,
-        List<EntryBatchRequestDTO> batches
+        @Valid List<EntryBatchRequestDTO> batches
 ) {
 }
