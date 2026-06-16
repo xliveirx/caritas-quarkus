@@ -1,6 +1,7 @@
 package br.com.caritas.service;
 
 import br.com.caritas.entity.Address;
+import br.com.caritas.entity.parish.CashRegisterEntity;
 import br.com.caritas.entity.parish.ParishEntity;
 import br.com.caritas.entity.user.AdminEntity;
 import io.quarkus.elytron.security.common.BcryptUtil;
@@ -8,6 +9,8 @@ import io.quarkus.runtime.StartupEvent;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
 import jakarta.transaction.Transactional;
+
+import java.math.BigDecimal;
 
 @ApplicationScoped
 public class StartupService {
@@ -29,6 +32,11 @@ public class StartupService {
 
             diocese.address = address;
             diocese.persist();
+
+            CashRegisterEntity cashRegister = new CashRegisterEntity();
+            cashRegister.parish = diocese;
+            cashRegister.balance = BigDecimal.ZERO;
+            cashRegister.persist();
         }
 
         if(AdminEntity.count() == 0) {

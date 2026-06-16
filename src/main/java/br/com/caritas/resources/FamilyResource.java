@@ -5,38 +5,34 @@ import br.com.caritas.dto.family.FamilyUpdateDTO;
 import br.com.caritas.entity.family.Situation;
 import br.com.caritas.service.FamilyService;
 import io.quarkus.security.Authenticated;
-import jakarta.annotation.Resource;
+import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Response;
-import org.eclipse.microprofile.jwt.JsonWebToken;
 
 import java.math.BigDecimal;
 
-@Resource
+@ApplicationScoped
 @Path("/api/v1/families")
 public class FamilyResource {
 
     @Inject
     private FamilyService familyService;
 
-    @Inject
-    private JsonWebToken jwt;
-
     @GET
     @Authenticated
     public Response getAllFamilies(@QueryParam("page") @DefaultValue("0") int page,
-                                             @QueryParam("size") @DefaultValue("10") int size,
-                                             @QueryParam("search") String search,
-                                             @QueryParam("parishId") Long parishId,
-                                             @QueryParam("situation") Situation situation,
-                                             @QueryParam("minIncome") BigDecimal minIncome,
-                                             @QueryParam("maxIncome") BigDecimal maxIncome,
-                                             @QueryParam("bolsaFamilia") Boolean bolsaFamilia) {
+                                   @QueryParam("size") @DefaultValue("10") int size,
+                                   @QueryParam("search") String search,
+                                   @QueryParam("parishId") Long parishId,
+                                   @QueryParam("situation") Situation situation,
+                                   @QueryParam("minIncome") BigDecimal minIncome,
+                                   @QueryParam("maxIncome") BigDecimal maxIncome,
+                                   @QueryParam("bolsaFamilia") Boolean bolsaFamilia) {
 
         var families = this.familyService.getAllFamilies(
-                page, size, search, parishId, situation, minIncome, maxIncome, bolsaFamilia, jwt
+                page, size, search, parishId, situation, minIncome, maxIncome, bolsaFamilia
         );
 
         return Response.ok(families).build();
@@ -47,7 +43,7 @@ public class FamilyResource {
     @Path("/{id}")
     public Response getFamilyById(@PathParam("id") Long id) {
 
-        var family = this.familyService.getFamilyById(id, jwt);
+        var family = this.familyService.getFamilyById(id);
 
         return Response.ok(family).build();
     }
@@ -56,8 +52,7 @@ public class FamilyResource {
     @Authenticated
     public Response createFamily(@Valid FamilyRequestDTO req) {
 
-        var family = this.familyService.createFamily(req, jwt);
-
+        var family = this.familyService.createFamily(req);
 
         return Response.ok(family).build();
     }
@@ -68,18 +63,19 @@ public class FamilyResource {
     public Response updateFamily(@PathParam("id") Long id,
                                  @Valid FamilyUpdateDTO req) {
 
-        var family = this.familyService.updateFamily(req, id, jwt);
+        var family = this.familyService.updateFamily(req, id);
 
         return Response.ok(family).build();
     }
 
     @DELETE
-    @Path("/{id}")
     @Authenticated
+    @Path("/{id}")
     public Response deleteFamily(@PathParam("id") Long id) {
 
-        this.familyService.deleteFamily(id, jwt);
+        this.familyService.deleteFamily(id);
 
         return Response.ok().build();
     }
+
 }

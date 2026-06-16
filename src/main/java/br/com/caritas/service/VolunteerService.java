@@ -6,21 +6,18 @@ import br.com.caritas.dto.PaginationDTO;
 import br.com.caritas.dto.user.VolunteerRequestDTO;
 import br.com.caritas.dto.user.VolunteerResponseDTO;
 import br.com.caritas.dto.user.VolunteerUpdateDTO;
-import br.com.caritas.entity.parish.ParishEntity;
-import br.com.caritas.entity.user.Roles;
 import br.com.caritas.entity.user.UserEntity;
 import br.com.caritas.entity.user.VolunteerEntity;
 import br.com.caritas.exception.BusinessRuleException;
 import br.com.caritas.exception.ResourceNotFoundException;
+import br.com.caritas.util.JwtParishContext;
 import io.quarkus.elytron.security.common.BcryptUtil;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
-import org.eclipse.microprofile.jwt.JsonWebToken;
 
 import java.time.LocalDateTime;
 import java.util.Comparator;
-import java.util.Set;
 import java.util.UUID;
 
 @ApplicationScoped
@@ -32,19 +29,13 @@ public class VolunteerService {
     @Inject
     private VolunteerDAO volunteerDAO;
 
-    public ApiListDTO getAllVolunteersByParishId(int page, int size, Long parishId,
-                                                 String search, Boolean active, JsonWebToken jwt) {
-        var groups = jwt.getGroups();
+    @Inject
+    private JwtParishContext parishContext;
 
-        if (!groups.contains(Roles.ADMIN.name())) {
-            Long parish = Long.valueOf(jwt.getClaim("parish").toString());
-            if (!parish.equals(parishId)) {
-                throw new BusinessRuleException(
-                        "You are not allowed to do that.",
-                        "A coordinator can only list volunteers from his own parish."
-                );
-            }
-        }
+    public ApiListDTO getAllVolunteersByParishId(int page, int size, Long parishId,
+                                                String search, Boolean active) {
+
+        parishContext.requireSameParish(parishId);
 
         var query = volunteerDAO.findByParish(page, size, parishId, search, active);
 
@@ -58,9 +49,7 @@ public class VolunteerService {
                 new PaginationDTO(page, size, query.pageCount(), query.count()));
     }
 
-    public VolunteerResponseDTO getVolunteerById(Long id, JsonWebToken jwt) {
-
-        var groups = jwt.getGroups();
+    public VolunteerResponseDTO getVolunteerById(Long id) {
 
         var volunteer = VolunteerEntity.<VolunteerEntity>find("id = ?1 and active = ?2", id, Boolean.TRUE)
                 .firstResultOptional()
@@ -69,13 +58,13 @@ public class VolunteerService {
                         "Volunteer with id " + id + " not found."
                 ));
 
-        this.checkSameParish(jwt, groups, volunteer);
+        parishContext.requireSameParish(volunteer.parish.id);
 
         return VolunteerResponseDTO.fromEntity(volunteer);
     }
 
     @Transactional
-    public VolunteerResponseDTO createVolunteer(VolunteerRequestDTO req, JsonWebToken jwt) {
+    public VolunteerResponseDTO createVolunteer(VolunteerRequestDTO req) {
 
         UserEntity.<UserEntity>find("email = ?1 and active = ?2", req.email(), Boolean.TRUE)
                 .firstResultOptional()
@@ -85,14 +74,6 @@ public class VolunteerService {
                             "The informed e-mail has already been registered");
                 });
 
-        var groups = jwt.getGroups();
-
-        if (groups.contains(Roles.ADMIN.name()) && req.parishId() == null) {
-            throw new BusinessRuleException(
-                    "Validation error.",
-                    "Admin must inform a parish to the volunteer.");
-        }
-
         VolunteerEntity volunteer = new VolunteerEntity();
         volunteer.name = req.name();
         volunteer.email = req.email();
@@ -101,24 +82,10 @@ public class VolunteerService {
         volunteer.resetToken = BcryptUtil.bcryptHash(token);
         volunteer.resetTokenExpiresAt = LocalDateTime.now().plusMinutes(15);
 
-        if (groups.contains(Roles.COORDINATOR.name())) {
-            Long parishId = Long.valueOf(jwt.getClaim("parish").toString());
-            ParishEntity parish = ParishEntity.<ParishEntity>find("id = ?1 and isDiocese = ?2", parishId, Boolean.FALSE)
-                    .firstResultOptional()
-                    .orElseThrow(() -> new ResourceNotFoundException(
-                            "Parish not found.",
-                            "Parish with id " + parishId + " not found."));
-            volunteer.parish = parish;
+        volunteer.parish = parishContext.resolveParish(req.parishId());
 
-        } else if (groups.contains(Roles.ADMIN.name())) {
-            ParishEntity parish = ParishEntity.<ParishEntity>find("id = ?1 and isDiocese = ?2", req.parishId(), Boolean.FALSE)
-                    .firstResultOptional()
-                    .orElseThrow(() -> new ResourceNotFoundException(
-                            "Parish not found.",
-                            "Parish with id " + req.parishId() + " not found."));
-            volunteer.parish = parish;
-        }
-
+        volunteer.createdAt = LocalDateTime.now();
+        volunteer.updatedAt = LocalDateTime.now();
         volunteer.active = Boolean.FALSE;
         volunteer.persist();
 
@@ -132,9 +99,7 @@ public class VolunteerService {
     }
 
     @Transactional
-    public VolunteerResponseDTO updateVolunteer(Long id, VolunteerUpdateDTO req, JsonWebToken jwt) {
-
-        var groups = jwt.getGroups();
+    public VolunteerResponseDTO updateVolunteer(Long id, VolunteerUpdateDTO req) {
 
         var volunteer = VolunteerEntity.<VolunteerEntity>find("id = ?1 and active = ?2", id, Boolean.TRUE)
                 .firstResultOptional()
@@ -143,20 +108,19 @@ public class VolunteerService {
                         "Volunteer with id " + id + " not found."
                 ));
 
-        this.checkSameParish(jwt, groups, volunteer);
+        parishContext.requireSameParish(volunteer.parish.id);
 
-        if(req.name() != null) {
+        if (req.name() != null) {
             volunteer.name = req.name();
         }
 
+        volunteer.updatedAt = LocalDateTime.now();
         volunteer.persist();
         return VolunteerResponseDTO.fromEntity(volunteer);
     }
 
     @Transactional
-    public void deactivateVolunteer(long id, JsonWebToken jwt) {
-
-        var groups = jwt.getGroups();
+    public void deactivateVolunteer(long id) {
 
         var volunteer = VolunteerEntity.<VolunteerEntity>find("id = ?1 and active = ?2", id, Boolean.TRUE)
                 .firstResultOptional()
@@ -164,15 +128,15 @@ public class VolunteerService {
                         "User not found.",
                         "User with id " + id + " not found."));
 
-        checkSameParish(jwt, groups, volunteer);
+        parishContext.requireSameParish(volunteer.parish.id);
 
         volunteer.active = Boolean.FALSE;
+        volunteer.updatedAt = LocalDateTime.now();
         volunteer.persist();
     }
 
     @Transactional
-    public void activateVolunteer(long id, JsonWebToken jwt) {
-        var groups = jwt.getGroups();
+    public void activateVolunteer(long id) {
 
         var volunteer = VolunteerEntity.<VolunteerEntity>find(
                 "id = ?1 and active = ?2 and password is not null", id, Boolean.FALSE)
@@ -181,21 +145,10 @@ public class VolunteerService {
                         "User not found.",
                         "User with id " + id + " not found."));
 
-        checkSameParish(jwt, groups, volunteer);
+        parishContext.requireSameParish(volunteer.parish.id);
 
         volunteer.active = Boolean.TRUE;
+        volunteer.updatedAt = LocalDateTime.now();
         volunteer.persist();
-    }
-
-    private void checkSameParish(JsonWebToken jwt, Set<String> groups, VolunteerEntity volunteer) {
-
-        if (groups.contains(Roles.COORDINATOR.name())) {
-            Long parish = Long.valueOf(jwt.getClaim("parish").toString());
-            if (!volunteer.parish.id.equals(parish)) {
-                throw new BusinessRuleException(
-                        "You are not allowed to do that.",
-                        "A coordinator can only edit a volunteer from his own parish.");
-            }
-        }
     }
 }

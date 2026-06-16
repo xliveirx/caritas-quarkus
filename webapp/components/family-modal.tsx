@@ -565,7 +565,7 @@ export function FamilyModal({ open, onClose, onSaved, family, parishes, isAdmin 
             </div>
 
             {/* ── Paróquia (ADMIN create only) ─────────────────────── */}
-            {isAdmin && !isEdit && parishes && parishes.length > 0 && (
+            {isAdmin && !isEdit && (
               <>
                 <SectionDivider label="Paróquia" />
                 <Field label="Paróquia" required error={errors.parishId}>

@@ -330,7 +330,7 @@ export default function FamiliasPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50">
-                  {['Responsável', 'CPF', 'Situação', 'Renda mensal', 'Bolsa Família', 'Membros', ''].map((h) => (
+                  {['Responsável', 'CPF', 'Situação', 'Renda mensal', 'Bolsa Família', ...(isAdmin ? ['Paróquia'] : []), 'Membros', ''].map((h) => (
                     <th key={h} className="px-5 py-3.5 text-left text-xs font-semibold
                       text-slate-500 uppercase tracking-wider whitespace-nowrap">
                       {h}
@@ -340,10 +340,10 @@ export default function FamiliasPage() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {isLoading ? (
-                  Array.from({ length: PAGE_SIZE }).map((_, i) => <SkeletonRow key={i} widths={[38, 22, 20, 18, 12, 8]} />)
+                  Array.from({ length: PAGE_SIZE }).map((_, i) => <SkeletonRow key={i} widths={isAdmin ? [38, 22, 20, 18, 12, 28, 8] : [38, 22, 20, 18, 12, 8]} />)
                 ) : families.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-5 py-16 text-center">
+                    <td colSpan={isAdmin ? 8 : 7} className="px-5 py-16 text-center">
                       <div className="flex flex-col items-center gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
                           stroke="currentColor" strokeWidth="1.5" className="w-10 h-10 text-slate-300">
@@ -401,6 +401,11 @@ export default function FamiliasPage() {
                             {family.bolsaFamilia ? 'Sim' : 'Não'}
                           </span>
                         </td>
+                        {isAdmin && (
+                          <td className="px-5 py-4 text-slate-600 text-sm whitespace-nowrap">
+                            {family.parishName}
+                          </td>
+                        )}
                         <td className="px-5 py-4 text-slate-600 text-sm">
                           {family.members.length}
                         </td>

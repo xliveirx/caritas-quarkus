@@ -1,16 +1,16 @@
 package br.com.caritas.dto.donation;
 
+import br.com.caritas.dto.config.AttributeResponseDTO;
 import br.com.caritas.entity.donation.*;
+
+import java.util.List;
 
 public record ClothesResponseDTO(
         Long id,
         String name,
         String description,
         Boolean active,
-        Size size,
-        Category category,
-        Gender gender,
-        Condition condition,
+        List<AttributeResponseDTO> attributes,
         Unit defaultUnit
 ) {
 
@@ -20,10 +20,9 @@ public record ClothesResponseDTO(
                 entity.name,
                 entity.description,
                 entity.active,
-                entity.size,
-                entity.category,
-                entity.gender,
-                entity.condition,
+                entity.attributes.stream()
+                        .map(AttributeResponseDTO::fromEntity)
+                        .toList(),
                 entity.defaultUnit
         );
     }

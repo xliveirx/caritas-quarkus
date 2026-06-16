@@ -3,31 +3,27 @@ package br.com.caritas.resources;
 import br.com.caritas.dto.donation.KitRequestDTO;
 import br.com.caritas.service.KitService;
 import io.quarkus.security.Authenticated;
-import jakarta.annotation.Resource;
+import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Response;
-import org.eclipse.microprofile.jwt.JsonWebToken;
-import org.jboss.resteasy.reactive.ResponseStatus;
 
-@Resource
+@ApplicationScoped
 @Path("/api/v1/kits")
 public class KitResource {
 
     @Inject
     private KitService kitService;
 
-    @Inject
-    private JsonWebToken jwt;
-
     @GET
     @Authenticated
     public Response getAllKits(@QueryParam("page") @DefaultValue("0") int page,
                                @QueryParam("size") @DefaultValue("10") int size,
                                @QueryParam("search") String search,
-                               @QueryParam("active") Boolean active) {
+                               @QueryParam("active") Boolean active,
+                               @QueryParam("parishId") Long parishId) {
 
-        var kits = this.kitService.getAllKits(page, size, search, active, jwt);
+        var kits = this.kitService.getAllKits(page, size, search, active, parishId);
 
         return Response.ok(kits).build();
     }
@@ -36,7 +32,7 @@ public class KitResource {
     @Authenticated
     public Response createKit(KitRequestDTO req) {
 
-        var kit = this.kitService.createKit(req, jwt);
+        var kit = this.kitService.createKit(req);
 
         return Response.ok(kit).build();
     }
@@ -46,7 +42,7 @@ public class KitResource {
     @Path("/deactivate/{id}")
     public Response deactivateKit(@PathParam("id") Long id) {
 
-        this.kitService.deactivateKit(id, jwt);
+        this.kitService.deactivateKit(id);
 
         return Response.noContent().build();
     }
@@ -56,7 +52,7 @@ public class KitResource {
     @Path("/activate/{id}")
     public Response activateKit(@PathParam("id") Long id) {
 
-        this.kitService.activateKit(id, jwt);
+        this.kitService.activateKit(id);
 
         return Response.noContent().build();
     }

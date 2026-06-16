@@ -41,7 +41,8 @@ function formatDate(iso: string) {
 /* ─── Entrada Tab ────────────────────────────────────────────────── */
 
 function EntradaTab() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
+  const isAdmin = user?.roles.includes('ADMIN') ?? false;
   const toast = useToast();
 
   const [entries, setEntries]         = useState<DonationEntryResponse[]>([]);
@@ -215,7 +216,7 @@ function EntradaTab() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50">
-                {['Data', 'Doador', 'Paróquia', 'Observação', 'Status', ''].map((h) => (
+                {['Data', 'Doador', ...(isAdmin ? ['Paróquia'] : []), 'Observação', 'Status', ''].map((h) => (
                   <th key={h} className="px-5 py-3.5 text-left text-xs font-semibold
                     text-slate-500 uppercase tracking-wider whitespace-nowrap">
                     {h}
@@ -226,11 +227,11 @@ function EntradaTab() {
             <tbody className="divide-y divide-slate-100">
               {isLoading ? (
                 Array.from({ length: PAGE_SIZE }).map((_, i) => (
-                  <SkeletonRow key={i} widths={[18, 40, 35, 55, 16, 8]} />
+                  <SkeletonRow key={i} widths={isAdmin ? [18, 40, 35, 55, 16, 8] : [18, 40, 55, 16, 8]} />
                 ))
               ) : entries.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-5 py-16 text-center">
+                  <td colSpan={isAdmin ? 6 : 5} className="px-5 py-16 text-center">
                     <div className="flex flex-col items-center gap-2">
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" strokeWidth="1.5" className="w-10 h-10 text-slate-300">
@@ -260,7 +261,7 @@ function EntradaTab() {
                     <td className="px-5 py-4 font-medium text-slate-800">
                       {entry.donator || <span className="text-slate-400 italic text-xs">Não informado</span>}
                     </td>
-                    <td className="px-5 py-4 text-slate-600">{entry.parish.name}</td>
+                    {isAdmin && <td className="px-5 py-4 text-slate-600">{entry.parish.name}</td>}
                     <td className="px-5 py-4 text-slate-500 max-w-[260px] truncate text-xs">
                       {entry.observation || <span className="text-slate-300">—</span>}
                     </td>
@@ -362,7 +363,8 @@ function getResponsible(family: FamilyResponse): string {
 }
 
 function SaidaTab() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
+  const isAdmin = user?.roles.includes('ADMIN') ?? false;
   const toast = useToast();
 
   const [exits, setExits]             = useState<DonationExitResponse[]>([]);
@@ -536,7 +538,7 @@ function SaidaTab() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50">
-                {['Data', 'Família', 'Paróquia', 'Cesta', 'Observação', 'Status', ''].map((h) => (
+                {['Data', 'Família', ...(isAdmin ? ['Paróquia'] : []), 'Cesta', 'Observação', 'Status', ''].map((h) => (
                   <th key={h} className="px-5 py-3.5 text-left text-xs font-semibold
                     text-slate-500 uppercase tracking-wider whitespace-nowrap">
                     {h}
@@ -547,11 +549,11 @@ function SaidaTab() {
             <tbody className="divide-y divide-slate-100">
               {isLoading ? (
                 Array.from({ length: PAGE_SIZE }).map((_, i) => (
-                  <SkeletonRow key={i} widths={[18, 35, 30, 30, 45, 16]} />
+                  <SkeletonRow key={i} widths={isAdmin ? [18, 35, 30, 30, 45, 16] : [18, 35, 30, 45, 16]} />
                 ))
               ) : exits.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-5 py-16 text-center">
+                  <td colSpan={isAdmin ? 7 : 6} className="px-5 py-16 text-center">
                     <div className="flex flex-col items-center gap-2">
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" strokeWidth="1.5" className="w-10 h-10 text-slate-300">
@@ -581,7 +583,7 @@ function SaidaTab() {
                     <td className="px-5 py-4 font-medium text-slate-800">
                       {getResponsible(exit.family)}
                     </td>
-                    <td className="px-5 py-4 text-slate-600">{exit.parish.name}</td>
+                    {isAdmin && <td className="px-5 py-4 text-slate-600">{exit.parish.name}</td>}
                     <td className="px-5 py-4 text-slate-700 font-medium">{exit.kit.name}</td>
                     <td className="px-5 py-4 text-slate-500 max-w-[220px] truncate text-xs">
                       {exit.observation || <span className="text-slate-300">—</span>}

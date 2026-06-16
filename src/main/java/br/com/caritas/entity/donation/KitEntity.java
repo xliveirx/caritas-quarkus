@@ -11,7 +11,7 @@ import java.util.List;
 @Table(name = "tbl_kits")
 public class KitEntity extends PanacheEntity {
 
-    @Column(name = "name", nullable = false, unique = true)
+    @Column(name = "name", nullable = false)
     public String name;
 
     @Column(name = "description")

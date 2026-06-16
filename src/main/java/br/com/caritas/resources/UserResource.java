@@ -1,6 +1,6 @@
 package br.com.caritas.resources;
 
-import br.com.caritas.dto.UserUpdateDTO;
+import br.com.caritas.dto.user.UserUpdateDTO;
 import br.com.caritas.service.UserService;
 import jakarta.annotation.Resource;
 import jakarta.inject.Inject;

@@ -8,9 +8,16 @@ import { Field, inputClass } from '@/components/ui/field';
 import { getParishFromToken } from '@/shared/utils/token';
 import type { FamilyResponse } from '@/shared/types/family-response';
 import type { VolunteerResponse } from '@/shared/types/volunteer-response';
+import type { CoordinatorResponse } from '@/shared/types/coordinator-response';
 import type { VisitResponse } from '@/shared/types/visit-response';
 import type { PaginatedResponse } from '@/shared/types/paginated-response';
 import type { ApiErrorResponse } from '@/shared/types/api-error-response';
+
+interface UserOption {
+  id: number;
+  name: string;
+  role: 'Voluntário' | 'Coordenador';
+}
 
 interface Props {
   open: boolean;
@@ -22,12 +29,12 @@ interface Props {
 }
 
 interface FormState {
-  volunteerId: string;
+  userId: string;
   scheduledDate: string;
   reason: string;
 }
 
-const emptyForm: FormState = { volunteerId: '', scheduledDate: '', reason: '' };
+const emptyForm: FormState = { userId: '', scheduledDate: '', reason: '' };
 
 function minDateTime(): string {
   return new Date(Date.now() + 60_000).toISOString().slice(0, 16);
@@ -39,17 +46,17 @@ export function VisitModal({ open, family, onClose, onCreated, visit, onSaved }:
   const isAdmin = user?.roles.includes('ADMIN') ?? false;
   const isEdit = !!visit;
 
-  const [form, setForm]             = useState<FormState>(emptyForm);
-  const [errors, setErrors]         = useState<Partial<FormState>>({});
-  const [volunteers, setVolunteers] = useState<VolunteerResponse[]>([]);
-  const [isLoadingVols, setIsLoadingVols] = useState(false);
-  const [isPending, setIsPending]   = useState(false);
+  const [form, setForm]           = useState<FormState>(emptyForm);
+  const [errors, setErrors]       = useState<Partial<FormState>>({});
+  const [users, setUsers]         = useState<UserOption[]>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+  const [isPending, setIsPending] = useState(false);
 
   useEffect(() => {
     if (open) {
       if (visit) {
         setForm({
-          volunteerId: String(visit.volunteer.id),
+          userId: String(visit.user.id),
           scheduledDate: visit.scheduledDate.slice(0, 16),
           reason: visit.reason,
         });
@@ -62,18 +69,34 @@ export function VisitModal({ open, family, onClose, onCreated, visit, onSaved }:
 
   useEffect(() => {
     if (!open || !token) return;
+
     const parishId = isEdit
       ? (isAdmin ? visit!.parish.id : getParishFromToken(token))
       : (isAdmin ? family?.parishId : getParishFromToken(token));
+
     if (!parishId) return;
-    setIsLoadingVols(true);
-    api.get<PaginatedResponse<VolunteerResponse>>(
-      `/api/v1/volunteers/parish/${parishId}?page=0&size=200&active=true`,
-      token
-    )
-      .then((d) => setVolunteers(d.data))
-      .catch(() => setVolunteers([]))
-      .finally(() => setIsLoadingVols(false));
+
+    setIsLoadingUsers(true);
+
+    Promise.all([
+      api.get<PaginatedResponse<VolunteerResponse>>(
+        `/api/v1/volunteers/parish/${parishId}?page=0&size=200&active=true`,
+        token
+      ),
+      api.get<PaginatedResponse<CoordinatorResponse>>(
+        `/api/v1/coordinators/parish/${parishId}?page=0&size=200`,
+        token
+      ),
+    ])
+      .then(([volunteers, coordinators]) => {
+        const merged: UserOption[] = [
+          ...volunteers.data.map((v) => ({ id: v.id, name: v.name, role: 'Voluntário' as const })),
+          ...coordinators.data.filter((c) => c.active).map((c) => ({ id: c.id, name: c.name, role: 'Coordenador' as const })),
+        ].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+        setUsers(merged);
+      })
+      .catch(() => setUsers([]))
+      .finally(() => setIsLoadingUsers(false));
   }, [open, family, visit, token, isAdmin, isEdit]);
 
   useEffect(() => {
@@ -91,7 +114,7 @@ export function VisitModal({ open, family, onClose, onCreated, visit, onSaved }:
   function validate(): boolean {
     const e: Partial<FormState> = {};
     if (isEdit) {
-      if (!form.volunteerId) e.volunteerId = 'Selecione um voluntário';
+      if (!form.userId) e.userId = 'Selecione um responsável';
       if (!form.reason.trim()) e.reason = 'Motivo obrigatório';
       if (form.scheduledDate) {
         const originalDate = visit!.scheduledDate.slice(0, 16);
@@ -100,7 +123,7 @@ export function VisitModal({ open, family, onClose, onCreated, visit, onSaved }:
         }
       }
     } else {
-      if (!form.volunteerId) e.volunteerId = 'Selecione um voluntário';
+      if (!form.userId) e.userId = 'Selecione um responsável';
       if (!form.scheduledDate) {
         e.scheduledDate = 'Data obrigatória';
       } else if (new Date(form.scheduledDate) <= new Date()) {
@@ -123,8 +146,8 @@ export function VisitModal({ open, family, onClose, onCreated, visit, onSaved }:
         if (form.scheduledDate && form.scheduledDate !== originalDate) {
           body.scheduledDate = `${form.scheduledDate}:00`;
         }
-        if (form.volunteerId !== String(visit!.volunteer.id)) {
-          body.volunteerId = Number(form.volunteerId);
+        if (form.userId !== String(visit!.user.id)) {
+          body.userId = Number(form.userId);
         }
         if (form.reason.trim() !== visit!.reason) {
           body.reason = form.reason.trim();
@@ -141,7 +164,7 @@ export function VisitModal({ open, family, onClose, onCreated, visit, onSaved }:
         if (!family) return;
         await api.post<VisitResponse>('/api/v1/visits', {
           familyId: family.id,
-          volunteerId: Number(form.volunteerId),
+          userId: Number(form.userId),
           scheduledDate: `${form.scheduledDate}:00`,
           reason: form.reason.trim(),
         }, token);
@@ -174,7 +197,6 @@ export function VisitModal({ open, family, onClose, onCreated, visit, onSaved }:
       />
 
       <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-md">
-        {/* Header */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-slate-200">
           <div>
             <h2 className="text-base font-bold text-slate-900">
@@ -202,7 +224,6 @@ export function VisitModal({ open, family, onClose, onCreated, visit, onSaved }:
         <form onSubmit={handleSubmit} noValidate>
           <div className="px-6 py-5 space-y-4">
 
-            {/* Family (read-only, create mode only) */}
             {!isEdit && (
               <div className="px-3 py-2.5 bg-slate-50 rounded-lg border border-slate-200">
                 <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-0.5">Família</p>
@@ -212,24 +233,22 @@ export function VisitModal({ open, family, onClose, onCreated, visit, onSaved }:
               </div>
             )}
 
-            {/* Volunteer */}
-            <Field label="Voluntário" required={!isEdit} error={errors.volunteerId}>
+            <Field label="Responsável pela visita" required={!isEdit} error={errors.userId}>
               <select
-                value={form.volunteerId}
-                onChange={(e) => set('volunteerId', e.target.value)}
-                disabled={isPending || isLoadingVols}
+                value={form.userId}
+                onChange={(e) => set('userId', e.target.value)}
+                disabled={isPending || isLoadingUsers}
                 className={inputClass}
               >
                 <option value="">
-                  {isLoadingVols ? 'Carregando voluntários...' : 'Selecione um voluntário'}
+                  {isLoadingUsers ? 'Carregando...' : 'Selecione um responsável'}
                 </option>
-                {volunteers.map((v) => (
-                  <option key={v.id} value={v.id}>{v.name}</option>
+                {users.map((u) => (
+                  <option key={u.id} value={u.id}>{u.name} — {u.role}</option>
                 ))}
               </select>
             </Field>
 
-            {/* Scheduled date */}
             <Field label="Data agendada" required={!isEdit} error={errors.scheduledDate}>
               <input
                 type="datetime-local"
@@ -241,7 +260,6 @@ export function VisitModal({ open, family, onClose, onCreated, visit, onSaved }:
               />
             </Field>
 
-            {/* Reason */}
             <Field label="Motivo" required={!isEdit} error={errors.reason}>
               <textarea
                 value={form.reason}

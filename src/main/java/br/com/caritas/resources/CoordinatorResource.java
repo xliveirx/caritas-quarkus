@@ -3,6 +3,7 @@ package br.com.caritas.resources;
 import br.com.caritas.dto.user.CoordinatorRequestDTO;
 import br.com.caritas.dto.user.CoordinatorUpdateDTO;
 import br.com.caritas.service.CoordinatorService;
+import io.quarkus.security.Authenticated;
 import jakarta.annotation.Resource;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
@@ -18,13 +19,13 @@ public class CoordinatorResource {
     private CoordinatorService coordinatorService;
 
     @GET
-    @RolesAllowed("ADMIN")
+    @Authenticated
     @Path("/parish/{parishId}")
     public Response getAllCoordinatorsByParish(@QueryParam("page") @DefaultValue("0") int page,
                                                @QueryParam("size") @DefaultValue("10") int size,
                                                @PathParam("parishId") Long parishId) {
 
-        var coordinators = this.coordinatorService.getAllCoordinatorsByParish (page, size, parishId);
+        var coordinators = this.coordinatorService.getAllCoordinatorsByParish(page, size, parishId);
 
         return Response.ok(coordinators).build();
     }

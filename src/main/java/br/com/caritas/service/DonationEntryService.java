@@ -6,19 +6,15 @@ import br.com.caritas.dto.PaginationDTO;
 import br.com.caritas.dto.donation.DonationEntryRequestDTO;
 import br.com.caritas.dto.donation.DonationEntryResponseDTO;
 import br.com.caritas.entity.donation.*;
-import br.com.caritas.entity.parish.ParishEntity;
-import br.com.caritas.entity.user.Roles;
 import br.com.caritas.exception.BusinessRuleException;
 import br.com.caritas.exception.ResourceNotFoundException;
+import br.com.caritas.util.JwtParishContext;
 import br.com.caritas.util.UnitConverter;
-
-import java.math.BigDecimal;
-
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
-import org.eclipse.microprofile.jwt.JsonWebToken;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @ApplicationScoped
@@ -27,11 +23,12 @@ public class DonationEntryService {
     @Inject
     private DonationEntryDAO donationEntryDAO;
 
-    public ApiListDTO getAllDonationEntries(int page, int size, String search, DonationStatus donationStatus, JsonWebToken jwt) {
+    @Inject
+    private JwtParishContext parishContext;
 
-        var groups = jwt.getGroups();
-        Long parishId = groups.contains(Roles.ADMIN.name()) ? null
-                : Long.valueOf(jwt.getClaim("parish").toString());
+    public ApiListDTO getAllDonationEntries(int page, int size, String search, DonationStatus donationStatus) {
+
+        Long parishId = parishContext.resolveParishId(null);
 
         var query = donationEntryDAO.findAll(page, size, parishId, search, donationStatus);
 
@@ -47,35 +44,14 @@ public class DonationEntryService {
     }
 
     @Transactional
-    public DonationEntryResponseDTO createDonationEntry(DonationEntryRequestDTO req, JsonWebToken jwt) {
+    public DonationEntryResponseDTO createDonationEntry(DonationEntryRequestDTO req) {
 
         DonationEntryEntity donation = new DonationEntryEntity();
-
         donation.donator = req.donator();
         donation.observation = req.observation();
         donation.date = LocalDateTime.now();
         donation.status = DonationStatus.CONFIRMED;
-
-        var groups = jwt.getGroups();
-        Long parishId;
-
-        if (groups.contains(Roles.ADMIN.name())) {
-            if (req.parishId() == null) {
-                throw new BusinessRuleException(
-                        "Parish required.",
-                        "Admin must provide a parishId to register a donation entry.");
-            }
-            parishId = req.parishId();
-        } else {
-            parishId = Long.valueOf(jwt.getClaim("parish").toString());
-        }
-
-        donation.parish = ParishEntity.<ParishEntity>findByIdOptional(parishId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Parish not found.",
-                        "Parish not found with id " + parishId
-                ));
-
+        donation.parish = parishContext.resolveParish(req.parishId());
         donation.persist();
 
         req.batches().forEach(batch -> {
@@ -97,7 +73,7 @@ public class DonationEntryService {
             entry.persist();
 
             StockItemEntity stockItem = StockItemEntity.<StockItemEntity>find(
-                            "product.id =?1 and parish.id = ?2", batch.productId(), donation.parish.id)
+                            "product.id = ?1 and parish.id = ?2", batch.productId(), donation.parish.id)
                     .firstResultOptional()
                     .orElseGet(() -> {
                         StockItemEntity newStockItem = new StockItemEntity();
@@ -116,35 +92,21 @@ public class DonationEntryService {
     }
 
     @Transactional
-    public void cancelDonationEntry(Long id, JsonWebToken jwt) {
+    public void cancelDonationEntry(Long id) {
 
-        var groups = jwt.getGroups();
-        DonationEntryEntity donation;
-        
-        if(groups.contains(Roles.ADMIN.name())) {
-            donation = DonationEntryEntity.<DonationEntryEntity>find(
-                            "id = ?1 and donationStatus = ?2", id, DonationStatus.CONFIRMED)
-                    .firstResultOptional()
-                    .orElseThrow(() -> new ResourceNotFoundException(
-                            "Donation not found.",
-                            "Donation not found with id " + id
-                    ));
-        } else {
-            Long parishId = Long.valueOf(jwt.getClaim("parish").toString());
-
-            donation = DonationEntryEntity.<DonationEntryEntity>find(
-                            "id = ?1 and donationStatus = ?2 and parish.id = ?3", id, DonationStatus.CONFIRMED, parishId)
-                    .firstResultOptional()
-                    .orElseThrow(() -> new ResourceNotFoundException(
-                            "Donation not found.",
-                            "Donation not found with id " + id
-                    ));
-        }
+        DonationEntryEntity donation = DonationEntryEntity.<DonationEntryEntity>find(
+                        "id = ?1 and status = ?2", id, DonationStatus.CONFIRMED)
+                .firstResultOptional()
+                .filter(d -> parishContext.canAccess(d.parish.id))
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Donation not found.",
+                        "Donation not found with id " + id
+                ));
 
         donation.batches.forEach(batch -> {
 
             StockItemEntity stockItem = StockItemEntity.<StockItemEntity>find(
-                            "product.id", batch.product.id)
+                            "product.id = ?1 and parish.id = ?2", batch.product.id, donation.parish.id)
                     .firstResultOptional()
                     .orElseThrow(() -> new ResourceNotFoundException(
                             "Stock item not found.",
@@ -152,6 +114,14 @@ public class DonationEntryService {
                     ));
 
             BigDecimal converted = UnitConverter.convert(batch.quantity, batch.unit, batch.product.defaultUnit);
+
+            if(stockItem.availableQuantity.subtract(converted).compareTo(BigDecimal.ZERO) < 0) {
+                throw new BusinessRuleException(
+                        "Falha ao cancelar.",
+                        "O estoque do produto '" + stockItem.product.name + "' não pode ser negativo."
+                );
+            }
+
             stockItem.availableQuantity = stockItem.availableQuantity.subtract(converted);
             stockItem.persist();
         });

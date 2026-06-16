@@ -13,15 +13,6 @@ import type { PaginatedResponse } from '@/shared/types/paginated-response';
 import type { ApiErrorResponse } from '@/shared/types/api-error-response';
 import type { ProductDetailResponse } from '@/shared/types/product-detail-response';
 
-const CATEGORY_LABELS: Record<string, string> = {
-  CALCA: 'Calça', CAMISETA: 'Camiseta', MOLETOM: 'Moletom', CASACO: 'Casaco',
-  TENIS: 'Tênis', SAPATO: 'Sapato', BOTA: 'Bota', ACESSORIO: 'Acessório', JAQUETA: 'Jaqueta',
-};
-
-const GENDER_LABELS: Record<string, string> = {
-  MASCULINO: 'Masculino', FEMININO: 'Feminino', UNISSEX: 'Unissex',
-};
-
 const UNIT_LABELS: Record<string, string> = {
   KG: 'kg', G: 'g', ML: 'mL', L: 'L', UNIDADES: 'un.',
 };
@@ -35,10 +26,7 @@ function KitItemTags({ product }: { product: ProductDetailResponse }) {
   const parts: string[] = [];
 
   if (product.type === 'CLOTHES') {
-    if (product.category) parts.push(`Categoria ${CATEGORY_LABELS[product.category] ?? product.category}`);
-    if (product.size)     parts.push(`Tamanho ${product.size}`);
-    if (product.gender)   parts.push(`Gênero ${GENDER_LABELS[product.gender] ?? product.gender}`);
-    parts.push(product.condition === 'NOVO' ? 'Novo' : 'Usado');
+    product.attributes.forEach((a) => parts.push(a.label));
   } else if (product.type === 'FOOD') {
     if (product.batch)          parts.push(`Lote ${product.batch}`);
     if (product.expirationDate) parts.push(`Val. ${formatDate(product.expirationDate)}`);
@@ -77,33 +65,63 @@ export function NewDonationExitModal({ open, onClose, onCreated }: Props) {
   const [observation, setObservation]   = useState('');
   const [isPending, setIsPending]       = useState(false);
 
-  const [parishes, setParishes]   = useState<ParishResponse[]>([]);
-  const [families, setFamilies]   = useState<FamilyResponse[]>([]);
-  const [kits, setKits]           = useState<KitResponse[]>([]);
-  const [loadingData, setLoadingData] = useState(false);
+  const [parishes, setParishes]         = useState<ParishResponse[]>([]);
+  const [families, setFamilies]         = useState<FamilyResponse[]>([]);
+  const [kits, setKits]                 = useState<KitResponse[]>([]);
+  const [loadingParishes, setLoadingParishes] = useState(false);
+  const [loadingData, setLoadingData]   = useState(false);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // For non-admin, load families and kits once on open (parish is fixed by JWT)
+  // For admin, only load parishes here; families + kits load when parishId changes
   useEffect(() => {
     if (!open || !token) return;
-    setLoadingData(true);
 
-    const fetchFamilies = api.get<PaginatedResponse<FamilyResponse>>('/api/v1/families?page=0&size=200', token);
-    const fetchKits     = api.get<PaginatedResponse<KitResponse>>('/api/v1/kits?page=0&size=200', token);
-    const fetchParishes = isAdmin
-      ? api.get<PaginatedResponse<ParishResponse>>('/api/v1/parishes?page=0&size=200', token)
-      : Promise.resolve(null);
-
-    Promise.all([fetchFamilies, fetchKits, fetchParishes])
-      .then(([fam, kit, par]) => {
-        setFamilies(fam.data);
-        setKits(kit.data.filter((k) => k.active));
-        if (par) setParishes(par.data.filter((p) => !p.isDiocese));
-      })
-      .catch(() => toast.error('Erro ao carregar dados', 'Não foi possível carregar os dados necessários.'))
-      .finally(() => setLoadingData(false));
+    if (isAdmin) {
+      setLoadingParishes(true);
+      api.get<PaginatedResponse<ParishResponse>>('/api/v1/parishes?page=0&size=200', token)
+        .then((res) => setParishes(res.data))
+        .catch(() => toast.error('Erro ao carregar paróquias', 'Não foi possível carregar as paróquias.'))
+        .finally(() => setLoadingParishes(false));
+    } else {
+      setLoadingData(true);
+      Promise.all([
+        api.get<PaginatedResponse<FamilyResponse>>('/api/v1/families?page=0&size=200', token),
+        api.get<PaginatedResponse<KitResponse>>('/api/v1/kits?page=0&size=200&active=true', token),
+      ])
+        .then(([fam, kit]) => {
+          setFamilies(fam.data);
+          setKits(kit.data.filter((k) => k.active));
+        })
+        .catch(() => toast.error('Erro ao carregar dados', 'Não foi possível carregar os dados necessários.'))
+        .finally(() => setLoadingData(false));
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, token, isAdmin]);
+
+  // For admin: re-fetch families and kits when a parish is selected
+  useEffect(() => {
+    if (!isAdmin || !parishId || !token) return;
+
+    setFamilyId('');
+    setKitId('');
+    setFamilies([]);
+    setKits([]);
+    setLoadingData(true);
+
+    Promise.all([
+      api.get<PaginatedResponse<FamilyResponse>>(`/api/v1/families?page=0&size=200&parishId=${parishId}`, token),
+      api.get<PaginatedResponse<KitResponse>>(`/api/v1/kits?page=0&size=200&active=true&parishId=${parishId}`, token),
+    ])
+      .then(([fam, kit]) => {
+        setFamilies(fam.data);
+        setKits(kit.data.filter((k) => k.active));
+      })
+      .catch(() => toast.error('Erro ao carregar dados', 'Não foi possível carregar os dados da paróquia selecionada.'))
+      .finally(() => setLoadingData(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [parishId, isAdmin, token]);
 
   useEffect(() => {
     if (!open) return;
@@ -115,13 +133,14 @@ export function NewDonationExitModal({ open, onClose, onCreated }: Props) {
   function resetForm() {
     setParishId(''); setFamilyId(''); setKitId('');
     setQuantity(''); setObservation(''); setErrors({});
+    setFamilies([]); setKits([]);
   }
 
   function handleClose() { resetForm(); onClose(); }
 
   function validate(): boolean {
     const e: Record<string, string> = {};
-    if (isAdmin && !parishId) e.parishId = 'Selecione uma paróquia';
+    if (isAdmin && !parishId) e.parishId = 'Selecione uma paróquia ou diocese';
     if (!familyId) e.familyId = 'Selecione uma família';
     if (!kitId)    e.kitId    = 'Selecione uma cesta';
     const qty = Number(quantity);
@@ -157,6 +176,8 @@ export function NewDonationExitModal({ open, onClose, onCreated }: Props) {
   if (!open) return null;
 
   const selectedKit = kits.find((k) => String(k.id) === kitId);
+  // Admin blocks all fields until a parish is selected
+  const blockedByParish = isAdmin && !parishId;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -186,15 +207,28 @@ export function NewDonationExitModal({ open, onClose, onCreated }: Props) {
         <form onSubmit={handleSubmit} noValidate>
           <div className="px-6 py-5 space-y-5">
 
-            {/* Parish — admin only */}
+            {/* Parish / Diocese — admin only */}
             {isAdmin && (
-              <Field label="Paróquia" required error={errors.parishId}>
+              <Field label="Paróquia / Diocese" required error={errors.parishId}>
                 <select value={parishId}
                   onChange={(e) => { setParishId(e.target.value); setErrors((p) => ({ ...p, parishId: '' })); }}
-                  disabled={isPending || loadingData}
+                  disabled={isPending || loadingParishes}
                   className={[inputClass, errors.parishId ? 'border-red-400 focus:ring-red-500 focus:border-red-500' : ''].join(' ')}>
-                  <option value="">Selecione uma paróquia</option>
-                  {parishes.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  <option value="">{loadingParishes ? 'Carregando...' : 'Selecione uma paróquia ou diocese'}</option>
+                  {parishes.filter((p) => p.isDiocese).length > 0 && (
+                    <optgroup label="Diocese">
+                      {parishes.filter((p) => p.isDiocese).map((p) => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {parishes.filter((p) => !p.isDiocese).length > 0 && (
+                    <optgroup label="Paróquias">
+                      {parishes.filter((p) => !p.isDiocese).map((p) => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
+                    </optgroup>
+                  )}
                 </select>
               </Field>
             )}
@@ -203,10 +237,14 @@ export function NewDonationExitModal({ open, onClose, onCreated }: Props) {
             <Field label="Família" required error={errors.familyId}>
               <select value={familyId}
                 onChange={(e) => { setFamilyId(e.target.value); setErrors((p) => ({ ...p, familyId: '' })); }}
-                disabled={isPending || loadingData}
-                className={[inputClass, errors.familyId ? 'border-red-400 focus:ring-red-500 focus:border-red-500' : ''].join(' ')}>
+                disabled={isPending || loadingData || blockedByParish}
+                className={[
+                  inputClass,
+                  errors.familyId ? 'border-red-400 focus:ring-red-500 focus:border-red-500' : '',
+                  blockedByParish ? 'opacity-40 cursor-not-allowed' : '',
+                ].join(' ')}>
                 <option value="">
-                  {loadingData ? 'Carregando...' : 'Selecione uma família'}
+                  {blockedByParish ? 'Selecione uma paróquia primeiro' : loadingData ? 'Carregando...' : 'Selecione uma família'}
                 </option>
                 {families.map((f) => (
                   <option key={f.id} value={f.id}>{getResponsible(f)}</option>
@@ -218,10 +256,14 @@ export function NewDonationExitModal({ open, onClose, onCreated }: Props) {
             <Field label="Cesta básica" required error={errors.kitId}>
               <select value={kitId}
                 onChange={(e) => { setKitId(e.target.value); setErrors((p) => ({ ...p, kitId: '' })); }}
-                disabled={isPending || loadingData}
-                className={[inputClass, errors.kitId ? 'border-red-400 focus:ring-red-500 focus:border-red-500' : ''].join(' ')}>
+                disabled={isPending || loadingData || blockedByParish}
+                className={[
+                  inputClass,
+                  errors.kitId ? 'border-red-400 focus:ring-red-500 focus:border-red-500' : '',
+                  blockedByParish ? 'opacity-40 cursor-not-allowed' : '',
+                ].join(' ')}>
                 <option value="">
-                  {loadingData ? 'Carregando...' : 'Selecione uma cesta'}
+                  {blockedByParish ? 'Selecione uma paróquia primeiro' : loadingData ? 'Carregando...' : 'Selecione uma cesta'}
                 </option>
                 {kits.map((k) => (
                   <option key={k.id} value={k.id}>{k.name} — {k.parish.name}</option>
@@ -270,9 +312,13 @@ export function NewDonationExitModal({ open, onClose, onCreated }: Props) {
             <Field label="Quantidade de cestas" required error={errors.quantity}>
               <input
                 type="number" min={1} step={1} placeholder="Ex: 1"
-                disabled={isPending} value={quantity}
+                disabled={isPending || blockedByParish} value={quantity}
                 onChange={(e) => { setQuantity(e.target.value); setErrors((p) => ({ ...p, quantity: '' })); }}
-                className={[inputClass, errors.quantity ? 'border-red-400 focus:ring-red-500 focus:border-red-500' : ''].join(' ')}
+                className={[
+                  inputClass,
+                  errors.quantity ? 'border-red-400 focus:ring-red-500 focus:border-red-500' : '',
+                  blockedByParish ? 'opacity-40 cursor-not-allowed' : '',
+                ].join(' ')}
               />
             </Field>
 
@@ -280,9 +326,9 @@ export function NewDonationExitModal({ open, onClose, onCreated }: Props) {
             <Field label="Observação">
               <textarea
                 placeholder="Observação opcional"
-                disabled={isPending} rows={2} value={observation}
+                disabled={isPending || blockedByParish} rows={2} value={observation}
                 onChange={(e) => setObservation(e.target.value)}
-                className={inputClass + ' resize-none'}
+                className={[inputClass + ' resize-none', blockedByParish ? 'opacity-40 cursor-not-allowed' : ''].join(' ')}
               />
             </Field>
 
@@ -295,7 +341,7 @@ export function NewDonationExitModal({ open, onClose, onCreated }: Props) {
                 rounded-lg hover:bg-slate-200 transition-colors duration-150 disabled:opacity-50">
               Cancelar
             </button>
-            <button type="submit" disabled={isPending || loadingData}
+            <button type="submit" disabled={isPending || loadingData || loadingParishes}
               className="flex items-center gap-2 px-5 py-2 text-sm font-semibold text-white
                 bg-wine-800 hover:bg-wine-900 rounded-lg transition-colors duration-150
                 focus:outline-none focus-visible:ring-2 focus-visible:ring-wine-700

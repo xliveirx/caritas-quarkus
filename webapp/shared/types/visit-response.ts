@@ -1,8 +1,13 @@
 import type { FamilyResponse } from './family-response';
 import type { ParishResponse } from './parish-response';
-import type { VolunteerResponse } from './volunteer-response';
 
 export type VisitStatus = 'SCHEDULED' | 'COMPLETED' | 'CANCELED';
+
+export interface VisitUserSummary {
+  id: number;
+  name: string;
+  email: string;
+}
 
 export interface VisitResponse {
   id: number;
@@ -13,5 +18,5 @@ export interface VisitResponse {
   createdAt: string;
   family: FamilyResponse;
   parish: ParishResponse;
-  volunteer: VolunteerResponse;
+  user: VisitUserSummary;
 }

@@ -1,4 +1,4 @@
-package br.com.caritas.dto;
+package br.com.caritas.dto.user;
 
 public record UserUpdateDTO(
         String name,

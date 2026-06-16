@@ -6,6 +6,7 @@ import br.com.caritas.dto.parish.ParishRequestDTO;
 import br.com.caritas.dto.parish.ParishResponseDTO;
 import br.com.caritas.dto.parish.ParishUpdateDTO;
 import br.com.caritas.entity.Address;
+import br.com.caritas.entity.parish.CashRegisterEntity;
 import br.com.caritas.entity.parish.ParishEntity;
 import br.com.caritas.exception.BusinessRuleException;
 import br.com.caritas.exception.ResourceNotFoundException;
@@ -14,6 +15,9 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @ApplicationScoped
 public class ParishService {
@@ -69,7 +73,14 @@ public class ParishService {
 
         parish.cnpj = req.cnpj();
         parish.address = address;
+        parish.createdAt = LocalDateTime.now();
+        parish.updatedAt = LocalDateTime.now();
         parish.persist();
+
+        CashRegisterEntity cashRegister = new CashRegisterEntity();
+        cashRegister.parish = parish;
+        cashRegister.balance = BigDecimal.ZERO;
+        cashRegister.persist();
 
         return ParishResponseDTO.fromEntity(parish);
     }
@@ -116,6 +127,7 @@ public class ParishService {
 
         }
 
+        parish.updatedAt = LocalDateTime.now();
         parish.persist();
         return ParishResponseDTO.fromEntity(parish);
     }

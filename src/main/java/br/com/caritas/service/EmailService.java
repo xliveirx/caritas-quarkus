@@ -2,10 +2,12 @@ package br.com.caritas.service;
 
 import br.com.caritas.exception.ResourceNotFoundException;
 import io.quarkus.mailer.Mail;
-import io.quarkus.mailer.reactive.ReactiveMailer;
+import io.quarkus.mailer.Mailer;
 import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -13,8 +15,12 @@ import java.nio.charset.StandardCharsets;
 @ApplicationScoped
 public class EmailService {
 
+    private static final Logger log = LoggerFactory.getLogger(EmailService.class);
+
+    private static final String FROM = "Cáritas Diocesana de Caxias do Sul <contatocaritasdiocesana@gmail.com>";
+
     @Inject
-    private ReactiveMailer mailer;
+    Mailer mailer;
 
     private String welcomeTemplate;
     private String resetPasswordTemplate;
@@ -53,15 +59,15 @@ public class EmailService {
                         + "&token="
                         + token);
 
-        mailer.send(Mail.withHtml(email, "Bem-vindo à Cáritas!", html)
-                        .setFrom("Cáritas Diocesana de Caxias do Sul <" + email + ">"))
-                .subscribe()
-                .with(
-                        success -> System.out.println("Email enviado com sucesso para " + email),
-                        failure -> System.err.println("Falha ao enviar email para " + email + ": " + failure.getMessage())
-                );
-    }
+        try {
+            mailer.send(Mail.withHtml(email, "Bem-vindo à Cáritas!", html)
+                    .setFrom(FROM));
+            System.out.println("Email enviado com sucesso para " + email);
 
+        } catch (Exception e) {
+            System.err.println("Falha ao enviar email para " + email + ": " + e.getMessage());
+        }
+    }
 
     public void sendResetPasswordEmail(String name, String email, String token) {
 
@@ -73,32 +79,33 @@ public class EmailService {
                         + "&token="
                         + token);
 
-        mailer.send(Mail.withHtml(email, "Redefinição de senha — Cáritas Diocesana", html)
-                        .setFrom("Cáritas Diocesana de Caxias do Sul <" + email + ">"))
-                .subscribe()
-                .with(
-                        success -> System.out.println("Email de redefinição enviado para " + email),
-                        failure -> System.err.println("Falha ao enviar email de redefinição para " + email + ": " + failure.getMessage())
-                );
+        try {
+            mailer.send(Mail.withHtml(email, "Redefinição de senha — Cáritas Diocesana", html)
+                    .setFrom(FROM));
+            System.out.println("Email de redefinição enviado para " + email);
+
+        } catch (Exception e) {
+            System.err.println("Falha ao enviar email de redefinição para " + email + ": " + e.getMessage());
+        }
     }
 
-    public void sendVisitReminderEmail(String volunteerName, String volunteerEmail,
-                                       String scheduledDate, String scheduledTime,
-                                       String familyName, String familyAddress) {
-
+    public boolean sendVisitReminderEmail(String volunteerName, String volunteerEmail,
+                                          String scheduledDate, String scheduledTime,
+                                          String familyName, String familyAddress) {
         String html = this.visitReminderTemplate
                 .replace("{volunteerName}", volunteerName)
                 .replace("{scheduledDate}", scheduledDate)
                 .replace("{scheduledTime}", scheduledTime)
                 .replace("{familyName}", familyName)
                 .replace("{familyAddress}", familyAddress);
-
-        mailer.send(Mail.withHtml(volunteerEmail, "Lembrete de visita para amanhã — Cáritas Diocesana", html)
-                        .setFrom("Cáritas Diocesana de Caxias do Sul <contatocaritasdiocesana@gmail.com>"))
-                .subscribe()
-                .with(
-                        success -> System.out.println("Lembrete de visita enviado para " + volunteerEmail),
-                        failure -> System.err.println("Falha ao enviar lembrete de visita para " + volunteerEmail + ": " + failure.getMessage())
-                );
+        try {
+            mailer.send(Mail.withHtml(volunteerEmail, "Lembrete de visita para amanhã — Cáritas Diocesana", html)
+                    .setFrom(FROM));
+            log.info("Email de lembrete de visita enviado para {}", volunteerEmail);
+            return true;
+        } catch (Exception e) {
+            log.error("Falha ao enviar email de lembrete de visita para {}: {}", volunteerEmail, e.getMessage());
+            return false;
+        }
     }
 }

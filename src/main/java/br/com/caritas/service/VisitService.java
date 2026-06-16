@@ -1,42 +1,44 @@
 package br.com.caritas.service;
 
 import br.com.caritas.dto.*;
-import br.com.caritas.entity.VisitEntity;
-import br.com.caritas.entity.VisitStatus;
+import br.com.caritas.dto.visit.VisitRequestDTO;
+import br.com.caritas.dto.visit.VisitResponseDTO;
+import br.com.caritas.dto.visit.VisitUpdateDTO;
+import br.com.caritas.entity.visit.VisitEntity;
+import br.com.caritas.entity.visit.VisitStatus;
 import br.com.caritas.entity.family.FamilyEntity;
-import br.com.caritas.entity.user.Roles;
-import br.com.caritas.entity.user.VolunteerEntity;
-import br.com.caritas.exception.BusinessRuleException;
+import br.com.caritas.entity.user.UserEntity;
 import br.com.caritas.exception.ResourceNotFoundException;
+import br.com.caritas.util.JwtParishContext;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
-import org.eclipse.microprofile.jwt.JsonWebToken;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @ApplicationScoped
 public class VisitService {
 
-    public ApiListDTO getAllVisitsByFamilyId(Long familyId, int page, int size, JsonWebToken jwt) {
+    @Inject
+    private JwtParishContext parishContext;
 
-        var groups = jwt.getGroups();
+    public ApiListDTO getAllVisitsByFamilyId(Long familyId, int page, int size) {
 
         PanacheQuery<VisitEntity> query;
-        if(groups.contains(Roles.ADMIN.name())) {
-
-             query = VisitEntity.<VisitEntity>find("family.id = ?1",
-                             Sort.by("createdAt").descending(),
-                             familyId)
-                     .page(Page.of(page, size));
+        if (parishContext.isAdmin()) {
+            query = VisitEntity.<VisitEntity>find("family.id = ?1",
+                            Sort.by("createdAt").descending(),
+                            familyId)
+                    .page(Page.of(page, size));
         } else {
-
-            Long parishId = jwt.getClaim("parish");
             query = VisitEntity.<VisitEntity>find("family.id = ?1 and parish.id = ?2",
                             Sort.by("createdAt").descending(),
-                            familyId, parishId)
+                            familyId, parishContext.getParishClaim())
                     .page(Page.of(page, size));
         }
 
@@ -51,52 +53,62 @@ public class VisitService {
         );
     }
 
+    public List<VisitResponseDTO> getAllVisitsForCalendar(int month, int year, Long parishId) {
+
+        LocalDateTime start = LocalDate.of(year, month, 1).atStartOfDay();
+        LocalDateTime end   = LocalDate.of(year, month, 1).plusMonths(1).atStartOfDay().minusNanos(1);
+
+        Long resolvedParishId = parishContext.resolveParishId(parishId);
+
+        List<VisitEntity> visits;
+        if (resolvedParishId != null) {
+            visits = VisitEntity.<VisitEntity>find(
+                    "scheduledDate >= ?1 and scheduledDate <= ?2 and parish.id = ?3",
+                    Sort.by("scheduledDate"), start, end, resolvedParishId
+            ).list();
+        } else {
+            visits = VisitEntity.<VisitEntity>find(
+                    "scheduledDate >= ?1 and scheduledDate <= ?2",
+                    Sort.by("scheduledDate"), start, end
+            ).list();
+        }
+
+        return visits.stream().map(VisitResponseDTO::fromEntity).toList();
+    }
+
     @Transactional
-    public VisitResponseDTO createVisit(VisitRequestDTO req, JsonWebToken jwt) {
+    public VisitResponseDTO createVisit(VisitRequestDTO req) {
 
         VisitEntity visit = new VisitEntity();
-
         visit.scheduledDate = req.scheduledDate();
         visit.status = VisitStatus.SCHEDULED;
         visit.reason = req.reason();
         visit.createdAt = LocalDateTime.now();
 
-        var groups = jwt.getGroups();
-        FamilyEntity family;
-
-        if(groups.contains(Roles.ADMIN.name())) {
-            family = FamilyEntity.<FamilyEntity>findByIdOptional(req.familyId())
-                    .orElseThrow(() -> new ResourceNotFoundException(
-                            "Family not found.",
-                            "Family not found with id: " + req.familyId()
-                    ));
-        } else {
-            Long parishId = Long.valueOf(jwt.getClaim("parish").toString());
-            family = FamilyEntity.<FamilyEntity>find("id = ?1 and parish.id = ?2", req.familyId(), parishId)
-                    .firstResultOptional()
-                    .orElseThrow(() -> new ResourceNotFoundException(
-                            "Family not found.",
-                            "Family not found with id: " + req.familyId()
-                    ));
-        }
+        FamilyEntity family = FamilyEntity.<FamilyEntity>findByIdOptional(req.familyId())
+                .filter(f -> parishContext.canAccess(f.parish.id))
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Family not found.",
+                        "Family not found with id: " + req.familyId()
+                ));
 
         visit.family = family;
         visit.parish = family.parish;
 
-        VolunteerEntity volunteer = VolunteerEntity.<VolunteerEntity>findByIdOptional(req.volunteerId())
+        UserEntity user = UserEntity.<UserEntity>findByIdOptional(req.userId())
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Volunteer not found.",
-                        "Volunteer not found with id: " + req.volunteerId()
+                        "User not found.",
+                        "User not found with id: " + req.userId()
                 ));
 
-        visit.volunteer  = volunteer;
+        visit.user = user;
         visit.persist();
 
         return VisitResponseDTO.fromEntity(visit);
     }
 
     @Transactional
-    public VisitResponseDTO updateVisit(Long id, VisitUpdateDTO req, JsonWebToken jwt) {
+    public VisitResponseDTO updateVisit(Long id, VisitUpdateDTO req) {
 
         VisitEntity visit = VisitEntity.<VisitEntity>find("id = ?1 and status = ?2", id, VisitStatus.SCHEDULED)
                 .firstResultOptional()
@@ -105,34 +117,25 @@ public class VisitService {
                         "Visit not found with id: " + id
                 ));
 
-        var groups = jwt.getGroups();
-        if(!groups.contains(Roles.ADMIN.name())) {
-            Long parishId = Long.valueOf(jwt.getClaim("parish").toString());
-            if(!visit.parish.id.equals(parishId)) {
-                throw new BusinessRuleException(
-                        "You cannot do that.",
-                        "You can only conclude a visit from your parish."
-                );
-            }
-        }
+        parishContext.requireSameParish(visit.parish.id);
 
-        if(req.scheduledDate() != null) {
+        if (req.scheduledDate() != null) {
             visit.scheduledDate = req.scheduledDate();
         }
 
-        if(req.reason() != null) {
+        if (req.reason() != null) {
             visit.reason = req.reason();
         }
 
-        if(req.volunteerId() != null) {
-            VolunteerEntity volunteer = VolunteerEntity.<VolunteerEntity>find(
-                    "id = ?1 and active = ?2", req.volunteerId(), Boolean.TRUE)
+        if (req.userId() != null) {
+            UserEntity user = UserEntity.<UserEntity>find(
+                    "id = ?1 and active = ?2", req.userId(), Boolean.TRUE)
                     .firstResultOptional()
                     .orElseThrow(() -> new ResourceNotFoundException(
-                            "Volunteer not found.",
-                            "Volunteer not found with id: " + req.volunteerId()
+                            "User not found.",
+                            "User not found with id: " + req.userId()
                     ));
-            visit.volunteer  = volunteer;
+            visit.user = user;
         }
 
         visit.persist();
@@ -140,7 +143,7 @@ public class VisitService {
     }
 
     @Transactional
-    public VisitResponseDTO changeVisitStatus(Long id, JsonWebToken jwt, VisitStatus status) {
+    public VisitResponseDTO changeVisitStatus(Long id, VisitStatus status) {
 
         VisitEntity visit = VisitEntity.<VisitEntity>find("id = ?1 and status = ?2", id, VisitStatus.SCHEDULED)
                 .firstResultOptional()
@@ -149,16 +152,7 @@ public class VisitService {
                         "Visit not found with id: " + id
                 ));
 
-        var groups = jwt.getGroups();
-        if(!groups.contains(Roles.ADMIN.name())) {
-            Long parishId = Long.valueOf(jwt.getClaim("parish").toString());
-            if(!visit.parish.id.equals(parishId)) {
-                throw new BusinessRuleException(
-                        "You cannot do that.",
-                        "You can only conclude a visit from your parish."
-                );
-            }
-        }
+        parishContext.requireSameParish(visit.parish.id);
 
         visit.status = status;
         visit.persist();

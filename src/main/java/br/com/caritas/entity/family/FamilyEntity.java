@@ -1,6 +1,7 @@
 package br.com.caritas.entity.family;
 
 import br.com.caritas.entity.Address;
+import br.com.caritas.entity.donation.DonationExitEntity;
 import br.com.caritas.entity.parish.ParishEntity;
 import io.quarkus.hibernate.orm.panache.PanacheEntity;
 import jakarta.persistence.*;

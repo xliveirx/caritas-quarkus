@@ -7,14 +7,12 @@ import br.com.caritas.dto.donation.DonationExitRequestDTO;
 import br.com.caritas.dto.donation.DonationExitResponseDTO;
 import br.com.caritas.entity.donation.*;
 import br.com.caritas.entity.family.FamilyEntity;
-import br.com.caritas.entity.parish.ParishEntity;
-import br.com.caritas.entity.user.Roles;
 import br.com.caritas.exception.BusinessRuleException;
 import br.com.caritas.exception.ResourceNotFoundException;
+import br.com.caritas.util.JwtParishContext;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
-import org.eclipse.microprofile.jwt.JsonWebToken;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -25,12 +23,12 @@ public class DonationExitService {
     @Inject
     private DonationExitDAO donationExitDAO;
 
-    @Transactional
-    public ApiListDTO getAllDonationExits(int page, int size, String search, DonationStatus donationStatus, JsonWebToken jwt) {
+    @Inject
+    private JwtParishContext parishContext;
 
-        var groups = jwt.getGroups();
-        Long parishId = groups.contains(Roles.ADMIN.name()) ? null
-                : Long.valueOf(jwt.getClaim("parish").toString());
+    public ApiListDTO getAllDonationExits(int page, int size, String search, DonationStatus donationStatus) {
+
+        Long parishId = parishContext.resolveParishId(null);
 
         var query = donationExitDAO.findAll(page, size, parishId, search, donationStatus);
 
@@ -46,71 +44,42 @@ public class DonationExitService {
     }
 
     @Transactional
-    public DonationExitResponseDTO createDonationExit(DonationExitRequestDTO req, JsonWebToken jwt) {
-
-        var groups = jwt.getGroups();
+    public DonationExitResponseDTO createDonationExit(DonationExitRequestDTO req) {
 
         DonationExitEntity donation = new DonationExitEntity();
         donation.date = LocalDateTime.now();
         donation.observation = req.observation();
         donation.status = DonationStatus.CONFIRMED;
+        donation.parish = parishContext.resolveParish(req.parishId());
 
-        ParishEntity parish;
-        FamilyEntity family;
-        KitEntity kit;
-        if (groups.contains(Roles.ADMIN.name())) {
+        FamilyEntity family = FamilyEntity.<FamilyEntity>find(
+                "id = ?1 and parish.id = ?2", req.familyId(), donation.parish.id)
+                .firstResultOptional()
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Family not found.",
+                        "Family not found with id " + req.familyId()));
 
-            parish = ParishEntity.<ParishEntity>findByIdOptional(req.parishId())
-                    .orElseThrow(() -> new ResourceNotFoundException(
-                            "Parish not found.",
-                            "Parish not found with id " + req.parishId()));
+        KitEntity kit = KitEntity.<KitEntity>find(
+                "id = ?1 and active = ?2 and parish.id = ?3", req.kitId(), Boolean.TRUE, donation.parish.id)
+                .firstResultOptional()
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Kit not found.",
+                        "Kit not found with id " + req.kitId()
+                ));
 
-            family = FamilyEntity.<FamilyEntity>findByIdOptional(req.familyId())
-                    .orElseThrow(() -> new ResourceNotFoundException(
-                            "Family not found.",
-                            "Family not found with id " + req.familyId()));
-
-            kit = KitEntity.<KitEntity>find("id = ?1 and active = ?2", req.kitId(), Boolean.TRUE
-                    ).firstResultOptional()
-                    .orElseThrow(() -> new ResourceNotFoundException(
-                            "Kit not found.",
-                            "Kit not found with id " + req.kitId()
-                    ));
-        } else {
-            Long parishId = Long.valueOf(jwt.getClaim("parish").toString());
-            parish = ParishEntity.<ParishEntity>findByIdOptional(parishId)
-                    .orElseThrow(() -> new ResourceNotFoundException(
-                            "Parish not found.",
-                            "Parish not found with id " + parishId));
-
-            family = FamilyEntity.<FamilyEntity>find("id = ?1 and parish.id = ?2", req.familyId(), parish.id)
-                    .firstResultOptional()
-                    .orElseThrow(() -> new ResourceNotFoundException(
-                            "Family not found.",
-                            "Family not found with id " + req.familyId() + " and parish id " + parish.id
-                    ));
-
-            kit = KitEntity.<KitEntity>find(
-                            "id = ?1 and active = ?2 and parish.id = ?3", req.kitId(), Boolean.TRUE, parish.id
-                    ).firstResultOptional()
-                    .orElseThrow(() -> new ResourceNotFoundException(
-                            "Kit not found.",
-                            "Kit not found with id " + req.kitId()
-                    ));
-        }
-
-        donation.parish = parish;
         donation.family = family;
         donation.kit = kit;
         donation.persist();
 
         kit.items.forEach(item -> {
 
-            StockItemEntity stockItem = StockItemEntity.<StockItemEntity>find("parish.id = ?1 and product.id = ?2",
-                    parish.id, item.product.id).firstResultOptional().orElseThrow(() -> new ResourceNotFoundException(
-                    "Stock item not found.",
-                    "Stock item not found with product id " + item.product.id + " and parish id " + parish.id
-            ));
+            StockItemEntity stockItem = StockItemEntity.<StockItemEntity>find(
+                    "parish.id = ?1 and product.id = ?2", donation.parish.id, item.product.id)
+                    .firstResultOptional()
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Stock item not found.",
+                            "Stock item not found with product id " + item.product.id + " and parish id " + donation.parish.id
+                    ));
 
             BigDecimal totalQuantity = item.quantity.multiply(req.quantity());
 
@@ -137,30 +106,16 @@ public class DonationExitService {
     }
 
     @Transactional
-    public void cancelDonationExit(Long id, JsonWebToken jwt) {
+    public void cancelDonationExit(Long id) {
 
-        var groups = jwt.getGroups();
-        DonationExitEntity donation;
-
-        if(groups.contains(Roles.ADMIN.name())) {
-
-            donation = DonationExitEntity.<DonationExitEntity>find("id = ?1 and status = ?2", id, DonationStatus.CONFIRMED)
-                    .firstResultOptional()
-                    .orElseThrow(() -> new ResourceNotFoundException(
-                            "Donation not found.",
-                            "Donation not found with id " + id
-                    ));
-        } else {
-
-            Long parishId = Long.valueOf(jwt.getClaim("parish").toString());
-            donation = DonationExitEntity.<DonationExitEntity>find(
-                    "id = ?1 and status = ?2 and parish.id = ?3", id, DonationStatus.CONFIRMED, parishId)
-                    .firstResultOptional()
-                    .orElseThrow(() -> new ResourceNotFoundException(
-                            "Donation not found.",
-                            "Donation not found with id " + id
-                    ));
-        }
+        DonationExitEntity donation = DonationExitEntity.<DonationExitEntity>find(
+                "id = ?1 and status = ?2", id, DonationStatus.CONFIRMED)
+                .firstResultOptional()
+                .filter(d -> parishContext.canAccess(d.parish.id))
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Donation not found.",
+                        "Donation not found with id " + id
+                ));
 
         donation.batches.forEach(batch -> {
 

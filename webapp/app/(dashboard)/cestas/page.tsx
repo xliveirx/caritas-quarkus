@@ -25,14 +25,6 @@ const UNIT_LABELS: Record<string, string> = {
   KG: 'kg', G: 'g', ML: 'mL', L: 'L', UNIDADES: 'un.',
 };
 
-const CATEGORY_LABELS: Record<string, string> = {
-  CALCA: 'Calça', CAMISETA: 'Camiseta', MOLETOM: 'Moletom', CASACO: 'Casaco',
-  TENIS: 'Tênis', SAPATO: 'Sapato', BOTA: 'Bota', ACESSORIO: 'Acessório', JAQUETA: 'Jaqueta',
-};
-
-const GENDER_LABELS: Record<string, string> = {
-  MASCULINO: 'Masculino', FEMININO: 'Feminino', UNISSEX: 'Unissex',
-};
 
 function formatDate(iso: string) {
   if (!iso) return '—';
@@ -42,10 +34,7 @@ function formatDate(iso: string) {
 function ProductTags({ product }: { product: ProductDetailResponse }) {
   const parts: string[] = [];
   if (product.type === 'CLOTHES') {
-    if (product.category) parts.push(`Categoria ${CATEGORY_LABELS[product.category] ?? product.category}`);
-    if (product.size)     parts.push(`Tamanho ${product.size}`);
-    if (product.gender)   parts.push(`Gênero ${GENDER_LABELS[product.gender] ?? product.gender}`);
-    parts.push(product.condition === 'NOVO' ? 'Novo' : 'Usado');
+    product.attributes.forEach((a) => parts.push(a.label));
   } else if (product.type === 'FOOD') {
     if (product.batch)          parts.push(`Lote ${product.batch}`);
     if (product.expirationDate) parts.push(`Val. ${formatDate(product.expirationDate)}`);

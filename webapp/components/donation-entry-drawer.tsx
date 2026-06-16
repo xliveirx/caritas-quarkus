@@ -4,15 +4,6 @@ import { useEffect } from 'react';
 import type { DonationEntryResponse } from '@/shared/types/donation-entry-response';
 import type { ProductDetailResponse } from '@/shared/types/product-detail-response';
 
-const categoryLabel: Record<string, string> = {
-  CALCA: 'Calça', CAMISETA: 'Camiseta', MOLETOM: 'Moletom', CASACO: 'Casaco',
-  TENIS: 'Tênis', SAPATO: 'Sapato', BOTA: 'Bota', ACESSORIO: 'Acessório', JAQUETA: 'Jaqueta',
-};
-
-const genderLabel: Record<string, string> = {
-  MASCULINO: 'Masculino', FEMININO: 'Feminino', UNISSEX: 'Unissex',
-};
-
 const unitLabel: Record<string, string> = {
   KG: 'kg', G: 'g', ML: 'mL', L: 'L', UNIDADES: 'unid.',
 };
@@ -33,10 +24,7 @@ function formatDate(iso: string) {
 function ProductTags({ product }: { product: ProductDetailResponse }) {
   const parts: string[] = [];
   if (product.type === 'CLOTHES') {
-    if (product.category) parts.push(`Categoria ${categoryLabel[product.category] ?? product.category}`);
-    if (product.size)     parts.push(`Tamanho ${product.size}`);
-    if (product.gender)   parts.push(`Gênero ${genderLabel[product.gender] ?? product.gender}`);
-    parts.push(product.condition === 'NOVO' ? 'Novo' : 'Usado');
+    product.attributes.forEach((a) => parts.push(a.label));
   } else if (product.type === 'FOOD') {
     if (product.batch)          parts.push(`Lote ${product.batch}`);
     if (product.expirationDate) parts.push(`Val. ${formatDate(product.expirationDate)}`);

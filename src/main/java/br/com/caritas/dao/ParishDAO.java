@@ -18,9 +18,6 @@ public class ParishDAO {
         Map<String, Object> params = new HashMap<>();
         List<String> conditions = new ArrayList<>();
 
-        conditions.add("isDiocese = :isDiocese");
-        params.put("isDiocese", Boolean.FALSE);
-
         if (search != null && !search.isBlank()) {
             String pattern = "%" + search.trim().toLowerCase() + "%";
             conditions.add("(lower(name) like :pattern or lower(coalesce(cnpj,'')) like :pattern)");

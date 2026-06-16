@@ -1,6 +1,7 @@
 package br.com.caritas.dto.family;
 
 import br.com.caritas.dto.AddressResponseDTO;
+import br.com.caritas.dto.donation.DonationExitResponseDTO;
 import br.com.caritas.entity.family.FamilyEntity;
 import br.com.caritas.entity.family.Situation;
 
@@ -11,6 +12,7 @@ public record FamilyResponseDTO(
         Long id,
         List<FamilyMemberResponseDTO> members,
         Long parishId,
+        String parishName,
         BigDecimal monthlyIncome,
         Boolean bolsaFamilia,
         Situation situation,
@@ -22,6 +24,7 @@ public record FamilyResponseDTO(
                 entity.id,
                 FamilyMemberResponseDTO.fromEntity(entity.members),
                 entity.parish.id,
+                entity.parish.name,
                 entity.monthlyIncome,
                 entity.bolsaFamilia,
                 entity.situation,

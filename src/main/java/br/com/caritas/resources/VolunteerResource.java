@@ -3,35 +3,31 @@ package br.com.caritas.resources;
 import br.com.caritas.dto.user.VolunteerRequestDTO;
 import br.com.caritas.dto.user.VolunteerUpdateDTO;
 import br.com.caritas.service.VolunteerService;
-import jakarta.annotation.Resource;
+import io.quarkus.security.Authenticated;
 import jakarta.annotation.security.RolesAllowed;
+import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Response;
-import org.eclipse.microprofile.jwt.JsonWebToken;
 
-@Resource
+@ApplicationScoped
 @Path("/api/v1/volunteers")
 public class VolunteerResource {
 
     @Inject
-    private JsonWebToken jwt;
-
-    @Inject
     private VolunteerService volunteerService;
 
-
     @GET
-    @RolesAllowed({"COORDINATOR", "ADMIN"})
+    @Authenticated
     @Path("/parish/{parishId}")
     public Response getAllVolunteersByParishId(@QueryParam("page") @DefaultValue("0") int page,
-                                               @QueryParam("size") @DefaultValue("10") int size,
-                                               @PathParam("parishId") Long parishId,
-                                               @QueryParam("search") String search,
-                                               @QueryParam("active") Boolean active) {
+                                              @QueryParam("size") @DefaultValue("10") int size,
+                                              @PathParam("parishId") Long parishId,
+                                              @QueryParam("search") String search,
+                                              @QueryParam("active") Boolean active) {
 
-        var volunteers = this.volunteerService.getAllVolunteersByParishId(page, size, parishId, search, active, jwt);
+        var volunteers = this.volunteerService.getAllVolunteersByParishId(page, size, parishId, search, active);
 
         return Response.ok(volunteers).build();
     }
@@ -41,7 +37,7 @@ public class VolunteerResource {
     @Path("/{id}")
     public Response getVolunteerById(@PathParam("id") Long id) {
 
-        var volunteer = this.volunteerService.getVolunteerById(id, jwt);
+        var volunteer = this.volunteerService.getVolunteerById(id);
 
         return Response.ok(volunteer).build();
     }
@@ -50,7 +46,7 @@ public class VolunteerResource {
     @RolesAllowed({"COORDINATOR", "ADMIN"})
     public Response createVolunteer(@Valid VolunteerRequestDTO req) {
 
-        var volunteer = this.volunteerService.createVolunteer(req, jwt);
+        var volunteer = this.volunteerService.createVolunteer(req);
 
         return Response.ok(volunteer).build();
     }
@@ -59,9 +55,9 @@ public class VolunteerResource {
     @RolesAllowed({"COORDINATOR", "ADMIN"})
     @Path("/{id}")
     public Response updateVolunteer(@PathParam("id") Long id,
-                                    VolunteerUpdateDTO req){
+                                    @Valid VolunteerUpdateDTO req) {
 
-        var volunteer = this.volunteerService.updateVolunteer(id, req, jwt);
+        var volunteer = this.volunteerService.updateVolunteer(id, req);
 
         return Response.ok(volunteer).build();
     }
@@ -71,7 +67,7 @@ public class VolunteerResource {
     @RolesAllowed({"COORDINATOR", "ADMIN"})
     public Response deactivateVolunteer(@PathParam("id") long id) {
 
-        this.volunteerService.deactivateVolunteer(id, jwt);
+        this.volunteerService.deactivateVolunteer(id);
 
         return Response.noContent().build();
     }
@@ -81,7 +77,7 @@ public class VolunteerResource {
     @RolesAllowed({"COORDINATOR", "ADMIN"})
     public Response activateVolunteer(@PathParam("id") long id) {
 
-        this.volunteerService.activateVolunteer(id, jwt);
+        this.volunteerService.activateVolunteer(id);
 
         return Response.noContent().build();
     }

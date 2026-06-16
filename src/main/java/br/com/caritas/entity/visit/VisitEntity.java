@@ -1,8 +1,8 @@
-package br.com.caritas.entity;
+package br.com.caritas.entity.visit;
 
 import br.com.caritas.entity.family.FamilyEntity;
 import br.com.caritas.entity.parish.ParishEntity;
-import br.com.caritas.entity.user.VolunteerEntity;
+import br.com.caritas.entity.user.UserEntity;
 import io.quarkus.hibernate.orm.panache.PanacheEntity;
 import jakarta.persistence.*;
 
@@ -37,8 +37,8 @@ public class VisitEntity extends PanacheEntity {
     public ParishEntity parish;
 
     @ManyToOne
-    @JoinColumn(name = "volunteer_id", nullable = false)
-    public VolunteerEntity volunteer;
+    @JoinColumn(name = "user_id", nullable = false)
+    public UserEntity user;
 
     @Column(name = "reminder_sent")
     public Boolean reminderSent = false;

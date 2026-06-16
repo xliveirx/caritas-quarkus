@@ -21,11 +21,9 @@ public class UserEntity extends PanacheEntity {
     @Column(name = "password")
     public String password;
 
-    @CreationTimestamp
     @Column(name = "created_at")
     public LocalDateTime createdAt;
 
-    @UpdateTimestamp
     @Column(name = "updated_at")
     public LocalDateTime updatedAt;
 

@@ -422,18 +422,18 @@ export default function FamilyVisitsPage() {
 
                     {/* Card body */}
                     <div className="px-4 py-3 space-y-3">
-                      {/* Volunteer */}
+                      {/* Responsible */}
                       <div className="flex items-center gap-2.5">
                         <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
                           <span className="text-slate-500 font-bold text-[10px]">
-                            {visit.volunteer.name.charAt(0).toUpperCase()}
+                            {visit.user.name.charAt(0).toUpperCase()}
                           </span>
                         </div>
                         <div>
                           <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 leading-none mb-0.5">
-                            Voluntário
+                            Responsável
                           </p>
-                          <p className="text-sm font-medium text-slate-800">{visit.volunteer.name}</p>
+                          <p className="text-sm font-medium text-slate-800">{visit.user.name}</p>
                         </div>
                       </div>
 

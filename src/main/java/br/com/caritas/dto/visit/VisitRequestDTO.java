@@ -1,4 +1,4 @@
-package br.com.caritas.dto;
+package br.com.caritas.dto.visit;
 
 import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.NotBlank;
@@ -18,6 +18,6 @@ public record VisitRequestDTO(
         Long familyId,
 
         @NotNull
-        Long volunteerId
+        Long userId
 ) {
 }

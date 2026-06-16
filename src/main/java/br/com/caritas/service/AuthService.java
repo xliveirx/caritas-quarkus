@@ -133,7 +133,7 @@ public class AuthService {
 
         String token = UUID.randomUUID().toString();
         user.resetToken = BcryptUtil.bcryptHash(token);
-        user.resetTokenExpiresAt = LocalDateTime.now().plusSeconds(15);
+        user.resetTokenExpiresAt = LocalDateTime.now().plusMinutes(15);
 
         this.emailService.sendResetPasswordEmail(
                 user.name,

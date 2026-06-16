@@ -31,7 +31,7 @@ public class DonationEntryDAO {
         }
 
         if (donationStatus != null) {
-            conditions.add("donationStatus = :donationStatus");
+            conditions.add("status = :donationStatus");
             params.put("donationStatus", donationStatus);
         }
 

@@ -1,8 +1,6 @@
 package br.com.caritas.dao;
 
-import br.com.caritas.entity.donation.Category;
-import br.com.caritas.entity.donation.Condition;
-import br.com.caritas.entity.donation.Gender;
+import br.com.caritas.entity.config.AttributeType;
 import br.com.caritas.entity.donation.ProductType;
 import br.com.caritas.entity.donation.StockItemEntity;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
@@ -18,8 +16,8 @@ import java.util.Map;
 public class StockItemDAO {
 
     public PanacheQuery<StockItemEntity> findClothes(int page, int size, Long parishId,
-                                                      String search, Category category,
-                                                      Gender gender, Condition condition) {
+                                                      String search, String category,
+                                                      String gender, String condition) {
         Map<String, Object> params = new HashMap<>();
         List<String> conditions = new ArrayList<>();
 
@@ -36,19 +34,22 @@ public class StockItemDAO {
             params.put("pattern", "%" + search.trim().toLowerCase() + "%");
         }
 
-        if (category != null) {
-            conditions.add("treat(product as ClothesProductEntity).category = :category");
-            params.put("category", category);
+        if (category != null && !category.isBlank()) {
+            conditions.add("exists (select a from AttributeEntity a where a member of treat(product as ClothesProductEntity).attributes and a.type = :catType and lower(a.label) = :category)");
+            params.put("catType", AttributeType.CATEGORY);
+            params.put("category", category.trim().toLowerCase());
         }
 
-        if (gender != null) {
-            conditions.add("treat(product as ClothesProductEntity).gender = :gender");
-            params.put("gender", gender);
+        if (gender != null && !gender.isBlank()) {
+            conditions.add("exists (select a from AttributeEntity a where a member of treat(product as ClothesProductEntity).attributes and a.type = :genType and lower(a.label) = :gender)");
+            params.put("genType", AttributeType.GENDER);
+            params.put("gender", gender.trim().toLowerCase());
         }
 
-        if (condition != null) {
-            conditions.add("treat(product as ClothesProductEntity).condition = :condition");
-            params.put("condition", condition);
+        if (condition != null && !condition.isBlank()) {
+            conditions.add("exists (select a from AttributeEntity a where a member of treat(product as ClothesProductEntity).attributes and a.type = :condType and lower(a.label) = :condition)");
+            params.put("condType", AttributeType.CONDITION);
+            params.put("condition", condition.trim().toLowerCase());
         }
 
         return StockItemEntity.<StockItemEntity>find(String.join(" and ", conditions), params)

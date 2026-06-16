@@ -28,11 +28,9 @@ public class ParishEntity extends PanacheEntity {
     @Column(name = "is_diocese", nullable = false)
     public Boolean isDiocese = Boolean.FALSE;
 
-    @CreationTimestamp
     @Column(name = "created_at")
     public LocalDateTime createdAt;
 
-    @UpdateTimestamp
     @Column(name = "updated_at")
     public LocalDateTime updatedAt;
 }

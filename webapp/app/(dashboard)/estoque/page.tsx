@@ -6,6 +6,7 @@ import { api } from '@/services/api';
 import { SkeletonRow } from '@/components/ui/skeleton-row';
 import { Pagination } from '@/components/ui/pagination';
 import { ErrorState } from '@/components/ui/error-state';
+import { useAttributes } from '@/hooks/use-attributes';
 import type { ClothesStockItem } from '@/shared/types/clothes-stock-item';
 import type { FoodStockItem } from '@/shared/types/food-stock-item';
 import type { PaginatedResponse } from '@/shared/types/paginated-response';
@@ -17,34 +18,9 @@ type Tab = 'clothes' | 'food';
 
 const PAGE_SIZE = 10;
 
-const CATEGORY_LABELS: Record<string, string> = {
-  CALCA: 'Calça', CAMISETA: 'Camiseta', MOLETOM: 'Moletom', CASACO: 'Casaco',
-  TENIS: 'Tênis', SAPATO: 'Sapato', BOTA: 'Bota', ACESSORIO: 'Acessório', JAQUETA: 'Jaqueta',
-};
-
-const GENDER_LABELS: Record<string, string> = {
-  MASCULINO: 'Masculino', FEMININO: 'Feminino', UNISSEX: 'Unissex',
-};
-
 const UNIT_LABELS: Record<string, string> = {
   KG: 'kg', G: 'g', ML: 'mL', L: 'L', UNIDADES: 'unidades',
 };
-
-const CATEGORY_OPTIONS = [
-  { value: '', label: 'Categoria' },
-  ...Object.entries(CATEGORY_LABELS).map(([value, label]) => ({ value, label })),
-];
-
-const GENDER_OPTIONS = [
-  { value: '', label: 'Gênero' },
-  ...Object.entries(GENDER_LABELS).map(([value, label]) => ({ value, label })),
-];
-
-const CONDITION_OPTIONS = [
-  { value: '', label: 'Condição' },
-  { value: 'NOVO', label: 'Novo' },
-  { value: 'USADO', label: 'Usado' },
-];
 
 const EXPIRED_OPTIONS = [
   { value: '', label: 'Validade' },
@@ -88,6 +64,20 @@ type OpenDropdown = 'category' | 'gender' | 'condition' | null;
 function ClothesTab() {
   const { token, user } = useAuth();
   const isAdmin = user?.roles.includes('ADMIN') ?? false;
+  const { attributes, loading: attrLoading } = useAttributes();
+
+  const categoryOptions = [
+    { value: '', label: 'Categoria' },
+    ...attributes.CATEGORY.map((a) => ({ value: a.label, label: a.label })),
+  ];
+  const genderOptions = [
+    { value: '', label: 'Gênero' },
+    ...attributes.GENDER.map((a) => ({ value: a.label, label: a.label })),
+  ];
+  const conditionOptions = [
+    { value: '', label: 'Condição' },
+    ...attributes.CONDITION.map((a) => ({ value: a.label, label: a.label })),
+  ];
 
   const [items, setItems]           = useState<ClothesStockItem[]>([]);
   const [totalItems, setTotalItems] = useState(0);
@@ -188,7 +178,7 @@ function ClothesTab() {
           <FilterDropdown
             label="Categoria"
             value={draftCategory}
-            options={CATEGORY_OPTIONS}
+            options={attrLoading ? [{ value: '', label: 'Carregando...' }] : categoryOptions}
             isOpen={openDropdown === 'category'}
             onToggle={() => setOpenDropdown(openDropdown === 'category' ? null : 'category')}
             onSelect={(v) => { setDraftCategory(v); setOpenDropdown(null); }}
@@ -197,7 +187,7 @@ function ClothesTab() {
           <FilterDropdown
             label="Gênero"
             value={draftGender}
-            options={GENDER_OPTIONS}
+            options={attrLoading ? [{ value: '', label: 'Carregando...' }] : genderOptions}
             isOpen={openDropdown === 'gender'}
             onToggle={() => setOpenDropdown(openDropdown === 'gender' ? null : 'gender')}
             onSelect={(v) => { setDraftGender(v); setOpenDropdown(null); }}
@@ -205,7 +195,7 @@ function ClothesTab() {
           <FilterDropdown
             label="Condição"
             value={draftCondition}
-            options={CONDITION_OPTIONS}
+            options={attrLoading ? [{ value: '', label: 'Carregando...' }] : conditionOptions}
             isOpen={openDropdown === 'condition'}
             onToggle={() => setOpenDropdown(openDropdown === 'condition' ? null : 'condition')}
             onSelect={(v) => { setDraftCondition(v); setOpenDropdown(null); }}
@@ -271,29 +261,31 @@ function ClothesTab() {
                       </div>
                     </td>
                     <td className="px-5 py-4 text-slate-600 text-sm">
-                      {item.clothes.category
-                        ? CATEGORY_LABELS[item.clothes.category] ?? item.clothes.category
-                        : <span className="text-slate-300">—</span>}
+                      {(() => {
+                        const cat = item.clothes.attributes.find((a) => a.type === 'CATEGORY');
+                        return cat ? cat.label : <span className="text-slate-300">—</span>;
+                      })()}
                     </td>
                     <td className="px-5 py-4 text-slate-600 text-sm">
-                      {item.clothes.size
-                        ? <span>{item.clothes.size}</span>
-                        : <span className="text-slate-300">—</span>}
+                      {(() => {
+                        const size = item.clothes.attributes.find((a) => a.type === 'SIZE');
+                        return size ? size.label : <span className="text-slate-300">—</span>;
+                      })()}
                     </td>
                     <td className="px-5 py-4 text-slate-600 text-sm">
-                      {item.clothes.gender
-                        ? GENDER_LABELS[item.clothes.gender] ?? item.clothes.gender
-                        : <span className="text-slate-300">—</span>}
+                      {(() => {
+                        const gender = item.clothes.attributes.find((a) => a.type === 'GENDER');
+                        return gender ? gender.label : <span className="text-slate-300">—</span>;
+                      })()}
                     </td>
                     <td className="px-5 py-4 text-slate-600 text-sm">
-                      {item.clothes.condition ? (
-                        <span>
-                          {item.clothes.condition === 'NOVO' ? 'Novo' : 'Usado'}
-                        </span>
-                      ) : <span className="text-slate-300">—</span>}
+                      {(() => {
+                        const cond = item.clothes.attributes.find((a) => a.type === 'CONDITION');
+                        return cond ? cond.label : <span className="text-slate-300">—</span>;
+                      })()}
                     </td>
                     {isAdmin && (
-                      <td className="px-5 py-4 text-slate-500 text-sm">{item.parish.name}</td>
+                      <td className="px-5 py-4 text-slate-600 text-sm">{item.parish.name}</td>
                     )}
                     <td className="px-5 py-4">
                       <QuantityBadge qty={item.availableQuantity} unit={item.clothes.defaultUnit} />
@@ -478,29 +470,18 @@ function FoodTab() {
                           </div>
                         </div>
                       </td>
-                      <td className="px-5 py-4 text-slate-600 text-xs font-mono">
+                      <td className="px-5 py-4 text-slate-600 text-sm">
                         {item.food.batch ?? <span className="text-slate-300">—</span>}
                       </td>
-                      <td className="px-5 py-4">
-                        {item.food.expirationDate ? (
-                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full
-                            text-xs font-semibold border ${
-                              isExpired
-                                ? 'bg-red-50 text-red-700 border-red-100'
-                                : expiresSoon
-                                ? 'bg-amber-50 text-amber-700 border-amber-100'
-                                : 'bg-slate-50 text-slate-600 border-slate-200'
-                            }`}>
-                            {isExpired && <span className="w-1.5 h-1.5 rounded-full bg-red-500" />}
-                            {expiresSoon && <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />}
-                            {formatDate(item.food.expirationDate)}
-                            {isExpired && ' · Vencido'}
-                            {expiresSoon && ' · Vence em breve'}
-                          </span>
-                        ) : <span className="text-slate-300">—</span>}
+                      <td className={`px-5 py-4 text-sm ${
+                        isExpired ? 'text-red-600' : expiresSoon ? 'text-amber-600' : 'text-slate-600'
+                      }`}>
+                        {item.food.expirationDate
+                          ? formatDate(item.food.expirationDate)
+                          : <span className="text-slate-300">—</span>}
                       </td>
-                       {isAdmin && (
-                        <td className="px-5 py-4 text-slate-500 text-sm">{item.parish.name}</td>
+                      {isAdmin && (
+                        <td className="px-5 py-4 text-slate-600 text-sm">{item.parish.name}</td>
                       )}
                       <td className="px-5 py-4">
                         <QuantityBadge qty={item.availableQuantity} unit={item.food.defaultUnit} />

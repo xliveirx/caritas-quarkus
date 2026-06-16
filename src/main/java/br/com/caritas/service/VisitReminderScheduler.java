@@ -1,7 +1,6 @@
 package br.com.caritas.service;
 
-import br.com.caritas.entity.VisitEntity;
-import br.com.caritas.entity.family.FamilyMemberEntity;
+import br.com.caritas.entity.visit.VisitEntity;
 import io.quarkus.scheduler.Scheduled;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -44,16 +43,19 @@ public class VisitReminderScheduler {
 
             String familyAddress = buildAddress(visit);
 
-            emailService.sendVisitReminderEmail(
-                    visit.volunteer.name,
-                    visit.volunteer.email,
+            boolean sent = emailService.sendVisitReminderEmail(
+                    visit.user.name,
+                    visit.user.email,
                     visit.scheduledDate.format(DATE_FMT),
                     visit.scheduledDate.format(TIME_FMT),
                     familyName,
                     familyAddress
             );
 
-            visit.reminderSent = true;
+            if (sent) {
+                visit.reminderSent = true;
+                visit.persist();
+            }
         }
     }
 

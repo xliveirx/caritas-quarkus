@@ -1,14 +1,15 @@
-export function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('pt-BR', {
-    day: '2-digit', month: '2-digit', year: 'numeric',
-  });
+export function formatDate(iso: string | null | undefined): string {
+  if (!iso) return '—';
+  const [y, m, d] = iso.split('T')[0].split('-');
+  return `${d}/${m}/${y}`;
 }
 
-export function formatDateTime(iso: string): string {
-  return new Date(iso).toLocaleString('pt-BR', {
-    day: '2-digit', month: '2-digit', year: 'numeric',
-    hour: '2-digit', minute: '2-digit',
-  });
+export function formatDateTime(iso: string | null | undefined): string {
+  if (!iso) return '—';
+  const [datePart, timePart = ''] = iso.split('T');
+  const [y, m, d] = datePart.split('-');
+  const [hh, mm] = timePart.split(':');
+  return `${d}/${m}/${y} ${hh ?? '00'}:${mm ?? '00'}`;
 }
 
 export function maskCNPJ(value: string): string {

@@ -24,19 +24,6 @@ const UNITS: { value: BatchUnit; label: string }[] = [
   { value: 'UNIDADES', label: 'Unidades' },
 ];
 
-const CATEGORY_LABELS: Record<string, string> = {
-  CALCA: 'Calça', CAMISETA: 'Camiseta', MOLETOM: 'Moletom', CASACO: 'Casaco',
-  TENIS: 'Tênis', SAPATO: 'Sapato', BOTA: 'Bota', ACESSORIO: 'Acessório', JAQUETA: 'Jaqueta',
-};
-
-const GENDER_LABELS: Record<string, string> = {
-  MASCULINO: 'Masculino', FEMININO: 'Feminino', UNISSEX: 'Unissex',
-};
-
-const CONDITION_LABELS: Record<string, string> = {
-  NOVO: 'Novo', USADO: 'Usado',
-};
-
 const UNIT_LABELS: Record<string, string> = {
   KG: 'kg', G: 'g', ML: 'mL', L: 'L', UNIDADES: 'unidades',
 };
@@ -67,13 +54,12 @@ function formatExpiration(dateStr: string): string {
 }
 
 function ClothesProductDetails({ p }: { p: ClothesDetailResponse }) {
-  const parts: string[] = [];
-  if (p.category)  parts.push(`Categoria ${CATEGORY_LABELS[p.category] ?? p.category}`);
-  if (p.size)      parts.push(`Tamanho ${p.size}`);
-  if (p.gender)    parts.push(GENDER_LABELS[p.gender] ?? p.gender);
-  if (p.condition) parts.push(CONDITION_LABELS[p.condition] ?? p.condition);
-  if (parts.length === 0) return null;
-  return <p className="text-[11px] text-slate-400 mt-0.5 leading-tight">{parts.join(' · ')}</p>;
+  if (p.attributes.length === 0) return null;
+  return (
+    <p className="text-[11px] text-slate-400 mt-0.5 leading-tight">
+      {p.attributes.map((a) => a.label).join(' · ')}
+    </p>
+  );
 }
 
 function FoodProductDetails({ p }: { p: FoodDetailResponse }) {
@@ -94,7 +80,7 @@ interface ProductPickerProps {
   selectedId: string;
   selectedType: 'CLOTHES' | 'FOOD' | '';
   onSelect: (id: number, type: 'CLOTHES' | 'FOOD') => void;
-  onCreateNew: () => void;
+  onCreateNew: (tab: 'CLOTHES' | 'FOOD') => void;
   disabled: boolean;
   error?: string;
 }
@@ -240,7 +226,7 @@ function ProductPicker({
           <div className="flex-none border-t border-slate-100 px-3 py-2 bg-white">
             <button
               type="button"
-              onClick={() => { setOpen(false); onCreateNew(); }}
+              onClick={() => { setOpen(false); onCreateNew(tab); }}
               className="flex items-center gap-1.5 text-xs font-semibold text-wine-700
                 hover:text-wine-900 transition-colors duration-150"
             >
@@ -279,6 +265,7 @@ export function NewDonationEntryModal({ open, onClose, onCreated }: Props) {
   const [productsLoading, setProductsLoading] = useState(false);
   const [parishes, setParishes]               = useState<ParishResponse[]>([]);
   const [productModalOpen, setProductModalOpen] = useState(false);
+  const [productModalInitialType, setProductModalInitialType] = useState<'clothes' | 'food'>('clothes');
 
   useEffect(() => {
     if (!open || !token) return;
@@ -384,7 +371,7 @@ export function NewDonationEntryModal({ open, onClose, onCreated }: Props) {
     }
 
     if (isAdmin && !selectedParishId) {
-      setParishError('Selecione uma paróquia');
+      setParishError('Selecione uma paróquia ou diocese');
       valid = false;
     } else {
       setParishError(undefined);
@@ -468,9 +455,9 @@ export function NewDonationEntryModal({ open, onClose, onCreated }: Props) {
           <form onSubmit={handleSubmit} noValidate>
             <div className="px-6 py-5 space-y-5">
 
-              {/* Parish — ADMIN only */}
+              {/* Parish / Diocese — ADMIN only */}
               {isAdmin && (
-                <Field label="Paróquia" required error={parishError}>
+                <Field label="Paróquia / Diocese" required error={parishError}>
                   <select
                     value={selectedParishId}
                     onChange={(e) => { setSelectedParishId(e.target.value); setParishError(undefined); }}
@@ -480,10 +467,21 @@ export function NewDonationEntryModal({ open, onClose, onCreated }: Props) {
                       parishError ? 'border-red-400 focus:ring-red-500 focus:border-red-500' : '',
                     ].join(' ')}
                   >
-                    <option value="">Selecione uma paróquia</option>
-                    {parishes.map((p) => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
+                    <option value="">Selecione uma paróquia ou diocese</option>
+                    {parishes.filter((p) => p.isDiocese).length > 0 && (
+                      <optgroup label="Diocese">
+                        {parishes.filter((p) => p.isDiocese).map((p) => (
+                          <option key={p.id} value={p.id}>{p.name}</option>
+                        ))}
+                      </optgroup>
+                    )}
+                    {parishes.filter((p) => !p.isDiocese).length > 0 && (
+                      <optgroup label="Paróquias">
+                        {parishes.filter((p) => !p.isDiocese).map((p) => (
+                          <option key={p.id} value={p.id}>{p.name}</option>
+                        ))}
+                      </optgroup>
+                    )}
                   </select>
                 </Field>
               )}
@@ -551,12 +549,33 @@ export function NewDonationEntryModal({ open, onClose, onCreated }: Props) {
                           selectedId={batch.productId}
                           selectedType={batch.productType}
                           onSelect={(id, type) => selectProduct(batch.id, id, type)}
-                          onCreateNew={() => setProductModalOpen(true)}
+                          onCreateNew={(tab) => { setProductModalInitialType(tab === 'CLOTHES' ? 'clothes' : 'food'); setProductModalOpen(true); }}
                           disabled={isPending}
                           error={batchErrors[batch.id]?.productId}
                         />
                         {batchErrors[batch.id]?.productId && (
                           <p className="text-xs text-red-600 font-medium">{batchErrors[batch.id]!.productId}</p>
+                        )}
+                      </div>
+
+                      {/* Quantity */}
+                      <div className="w-24 space-y-1 shrink-0">
+                        <input
+                          type="number"
+                          min={1}
+                          placeholder="Qtd."
+                          disabled={isPending}
+                          value={batch.quantity}
+                          onChange={(e) => updateBatch(batch.id, 'quantity', e.target.value)}
+                          className={[
+                            inputClass,
+                            batchErrors[batch.id]?.quantity
+                              ? 'border-red-400 focus:ring-red-500 focus:border-red-500'
+                              : '',
+                          ].join(' ')}
+                        />
+                        {batchErrors[batch.id]?.quantity && (
+                          <p className="text-xs text-red-600 font-medium">{batchErrors[batch.id]!.quantity}</p>
                         )}
                       </div>
 
@@ -581,27 +600,6 @@ export function NewDonationEntryModal({ open, onClose, onCreated }: Props) {
                         </select>
                         {batchErrors[batch.id]?.unit && (
                           <p className="text-xs text-red-600 font-medium">{batchErrors[batch.id]!.unit}</p>
-                        )}
-                      </div>
-
-                      {/* Quantity */}
-                      <div className="w-24 space-y-1 shrink-0">
-                        <input
-                          type="number"
-                          min={1}
-                          placeholder="Qtd."
-                          disabled={isPending}
-                          value={batch.quantity}
-                          onChange={(e) => updateBatch(batch.id, 'quantity', e.target.value)}
-                          className={[
-                            inputClass,
-                            batchErrors[batch.id]?.quantity
-                              ? 'border-red-400 focus:ring-red-500 focus:border-red-500'
-                              : '',
-                          ].join(' ')}
-                        />
-                        {batchErrors[batch.id]?.quantity && (
-                          <p className="text-xs text-red-600 font-medium">{batchErrors[batch.id]!.quantity}</p>
                         )}
                       </div>
 
@@ -668,6 +666,7 @@ export function NewDonationEntryModal({ open, onClose, onCreated }: Props) {
         open={productModalOpen}
         onClose={() => setProductModalOpen(false)}
         onCreated={handleProductCreated}
+        initialType={productModalInitialType}
       />
     </>
   );

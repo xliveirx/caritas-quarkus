@@ -83,6 +83,8 @@ public class CoordinatorService {
         coordinator.parish = parish;
 
         coordinator.active = Boolean.FALSE;
+        coordinator.updatedAt = LocalDateTime.now();
+        coordinator.createdAt = LocalDateTime.now();
         coordinator.persist();
 
         this.emailService.sendWelcomeEmail(
@@ -107,6 +109,7 @@ public class CoordinatorService {
             coordinator.name = req.name();
         }
 
+        coordinator.updatedAt = LocalDateTime.now();
         coordinator.persist();
 
         return CoordinatorResponseDTO.fromEntity(coordinator);
@@ -121,6 +124,7 @@ public class CoordinatorService {
                         "User with id " + id + " not found."));
 
         coordinator.active = Boolean.FALSE;
+        coordinator.updatedAt = LocalDateTime.now();
         coordinator.persist();
     }
 
@@ -134,6 +138,7 @@ public class CoordinatorService {
                         "User with id " + id + " not found."));
 
         coordinator.active = Boolean.TRUE;
+        coordinator.updatedAt = LocalDateTime.now();
         coordinator.persist();
     }
 

@@ -5,13 +5,9 @@ import br.com.caritas.dto.ApiListDTO;
 import br.com.caritas.dto.PaginationDTO;
 import br.com.caritas.dto.donation.ClothesStockItemResponseDTO;
 import br.com.caritas.dto.donation.FoodStockItemResponseDTO;
-import br.com.caritas.entity.donation.Category;
-import br.com.caritas.entity.donation.Condition;
-import br.com.caritas.entity.donation.Gender;
-import br.com.caritas.entity.user.Roles;
+import br.com.caritas.util.JwtParishContext;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import org.eclipse.microprofile.jwt.JsonWebToken;
 
 import java.util.Comparator;
 
@@ -21,12 +17,14 @@ public class StockItemService {
     @Inject
     private StockItemDAO stockItemDAO;
 
-    public ApiListDTO getAllClothesStockItems(JsonWebToken jwt, int page, int size,
-                                              String search, Category category,
-                                              Gender gender, Condition condition) {
-        var groups = jwt.getGroups();
-        Long parishId = groups.contains(Roles.ADMIN.name()) ? null
-                : Long.valueOf(jwt.getClaim("parish").toString());
+    @Inject
+    private JwtParishContext parishContext;
+
+    public ApiListDTO getAllClothesStockItems(int page, int size,
+                                             String search, String category,
+                                             String gender, String condition, Long parishId) {
+
+        parishId = parishContext.resolveParishId(parishId);
 
         var query = stockItemDAO.findClothes(page, size, parishId, search, category, gender, condition);
 
@@ -42,11 +40,10 @@ public class StockItemService {
         );
     }
 
-    public ApiListDTO getAllFoodStockItems(JsonWebToken jwt, int page, int size,
-                                           String search, Boolean expired) {
-        var groups = jwt.getGroups();
-        Long parishId = groups.contains(Roles.ADMIN.name()) ? null
-                : Long.valueOf(jwt.getClaim("parish").toString());
+    public ApiListDTO getAllFoodStockItems(int page, int size,
+                                          String search, Boolean expired) {
+
+        Long parishId = parishContext.resolveParishId(null);
 
         var query = stockItemDAO.findFood(page, size, parishId, search, expired);
 

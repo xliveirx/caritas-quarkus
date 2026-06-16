@@ -18,19 +18,6 @@ const UNIT_LABELS: Record<string, string> = {
   KG: 'kg', G: 'g', ML: 'mL', L: 'L', UNIDADES: 'un.',
 };
 
-const CATEGORY_LABELS: Record<string, string> = {
-  CALCA: 'Calça', CAMISETA: 'Camiseta', MOLETOM: 'Moletom', CASACO: 'Casaco',
-  TENIS: 'Tênis', SAPATO: 'Sapato', BOTA: 'Bota', ACESSORIO: 'Acessório', JAQUETA: 'Jaqueta',
-};
-
-const GENDER_LABELS: Record<string, string> = {
-  MASCULINO: 'Masculino', FEMININO: 'Feminino', UNISSEX: 'Unissex',
-};
-
-const CONDITION_LABELS: Record<string, string> = {
-  NOVO: 'Novo', USADO: 'Usado',
-};
-
 interface ItemRow {
   id: string;
   productId: string;
@@ -45,17 +32,6 @@ interface Props {
   onCreated: (kit: KitResponse) => void;
 }
 
-/* ─── Tag ─────────────────────────────────────────────────────────── */
-
-function Tag({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium
-      bg-slate-100 text-slate-500 ring-1 ring-slate-200">
-      {children}
-    </span>
-  );
-}
-
 function formatExpiration(dateStr: string): string {
   try {
     return new Date(dateStr + 'T00:00:00')
@@ -63,6 +39,24 @@ function formatExpiration(dateStr: string): string {
   } catch {
     return dateStr;
   }
+}
+
+function ClothesProductDetails({ p }: { p: ClothesDetailResponse }) {
+  if (p.attributes.length === 0) return null;
+  return (
+    <p className="text-[11px] text-slate-400 mt-0.5 leading-tight">
+      {p.attributes.map((a) => a.label).join(' · ')}
+    </p>
+  );
+}
+
+function FoodProductDetails({ p }: { p: FoodDetailResponse }) {
+  const parts: string[] = [];
+  if (p.batch)          parts.push(`Lote ${p.batch}`);
+  if (p.expirationDate) parts.push(`Val. ${formatExpiration(p.expirationDate)}`);
+  if (p.defaultUnit)    parts.push(UNIT_LABELS[p.defaultUnit] ?? p.defaultUnit);
+  if (parts.length === 0) return null;
+  return <p className="text-[11px] text-slate-400 mt-0.5 leading-tight">{parts.join(' · ')}</p>;
 }
 
 /* ─── ProductPicker ────────────────────────────────────────────────── */
@@ -73,7 +67,7 @@ interface ProductPickerProps {
   productsLoading: boolean;
   productsError: boolean;
   onRetry: () => void;
-  onCreateNew: () => void;
+  onCreateNew: (tab: 'CLOTHES' | 'FOOD') => void;
   selectedId: string;
   selectedType: 'CLOTHES' | 'FOOD' | '';
   onSelect: (id: number, type: 'CLOTHES' | 'FOOD', defaultUnit: string | null) => void;
@@ -131,12 +125,8 @@ function ProductPicker({
                 'w-full text-left px-3 py-2.5 transition-colors duration-100 border-l-2',
                 isSelected ? 'bg-wine-50 border-wine-700' : 'border-transparent hover:bg-slate-50',
               ].join(' ')}>
-              <p className="text-sm font-medium text-slate-800 leading-tight mb-1.5">{p.name}</p>
-              <div className="flex flex-wrap gap-1">
-                {p.batch          && <Tag>Lote: {p.batch}</Tag>}
-                {p.expirationDate && <Tag>Val: {formatExpiration(p.expirationDate)}</Tag>}
-                {p.defaultUnit    && <Tag>Unidade: {UNIT_LABELS[p.defaultUnit] ?? p.defaultUnit}</Tag>}
-              </div>
+              <p className="text-sm font-medium text-slate-800 leading-tight">{p.name}</p>
+              <FoodProductDetails p={p} />
             </button>
           );
         })
@@ -155,13 +145,8 @@ function ProductPicker({
               'w-full text-left px-3 py-2.5 transition-colors duration-100 border-l-2',
               isSelected ? 'bg-wine-50 border-wine-700' : 'border-transparent hover:bg-slate-50',
             ].join(' ')}>
-            <p className="text-sm font-medium text-slate-800 leading-tight mb-1.5">{p.name}</p>
-            <div className="flex flex-wrap gap-1">
-              {p.size      && <Tag>Tam: {p.size}</Tag>}
-              {p.category  && <Tag>{CATEGORY_LABELS[p.category] ?? p.category}</Tag>}
-              {p.gender    && <Tag>{GENDER_LABELS[p.gender] ?? p.gender}</Tag>}
-              {p.condition && <Tag>{CONDITION_LABELS[p.condition]}</Tag>}
-            </div>
+            <p className="text-sm font-medium text-slate-800 leading-tight">{p.name}</p>
+            <ClothesProductDetails p={p} />
           </button>
         );
       })
@@ -215,7 +200,7 @@ function ProductPicker({
           </div>
 
           <div className="flex-none border-t border-slate-100 px-3 py-2 bg-white">
-            <button type="button" onClick={() => { setOpen(false); onCreateNew(); }}
+            <button type="button" onClick={() => { setOpen(false); onCreateNew(tab); }}
               className="flex items-center gap-1.5 text-xs font-semibold text-wine-700
                 hover:text-wine-900 transition-colors duration-150">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
@@ -254,6 +239,7 @@ export function NewKitModal({ open, onClose, onCreated }: Props) {
   const [productsError, setProductsError]     = useState(false);
   const [parishes, setParishes]               = useState<ParishResponse[]>([]);
   const [productModalOpen, setProductModalOpen] = useState(false);
+  const [productModalInitialType, setProductModalInitialType] = useState<'clothes' | 'food'>('food');
 
   /* ─── Fetch ─────────────────────────────────────────────────────── */
 
@@ -278,7 +264,7 @@ export function NewKitModal({ open, onClose, onCreated }: Props) {
     fetchProducts();
     if (isAdmin) {
       api.get<PaginatedResponse<ParishResponse>>('/api/v1/parishes?page=0&size=200', token)
-        .then((res) => setParishes(res.data.filter((p) => !p.isDiocese)))
+        .then((res) => setParishes(res.data))
         .catch(() => {});
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -364,7 +350,7 @@ export function NewKitModal({ open, onClose, onCreated }: Props) {
     if (!name.trim()) { setNameError('Nome obrigatório'); valid = false; }
     else setNameError(undefined);
 
-    if (isAdmin && !selectedParishId) { setParishError('Selecione uma paróquia'); valid = false; }
+    if (isAdmin && !selectedParishId) { setParishError('Selecione uma paróquia ou diocese'); valid = false; }
     else setParishError(undefined);
 
     if (items.length === 0) {
@@ -452,17 +438,28 @@ export function NewKitModal({ open, onClose, onCreated }: Props) {
           <form onSubmit={handleSubmit} noValidate>
             <div className="px-6 py-5 space-y-5">
 
-              {/* Parish — ADMIN only */}
+              {/* Parish / Diocese — ADMIN only */}
               {isAdmin && (
-                <Field label="Paróquia" required error={parishError}>
+                <Field label="Paróquia / Diocese" required error={parishError}>
                   <select value={selectedParishId}
                     onChange={(e) => { setSelectedParishId(e.target.value); setParishError(undefined); }}
                     disabled={isPending}
                     className={[inputClass, parishError ? 'border-red-400 focus:ring-red-500 focus:border-red-500' : ''].join(' ')}>
-                    <option value="">Selecione uma paróquia</option>
-                    {parishes.map((p) => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
+                    <option value="">Selecione uma paróquia ou diocese</option>
+                    {parishes.filter((p) => p.isDiocese).length > 0 && (
+                      <optgroup label="Diocese">
+                        {parishes.filter((p) => p.isDiocese).map((p) => (
+                          <option key={p.id} value={p.id}>{p.name}</option>
+                        ))}
+                      </optgroup>
+                    )}
+                    {parishes.filter((p) => !p.isDiocese).length > 0 && (
+                      <optgroup label="Paróquias">
+                        {parishes.filter((p) => !p.isDiocese).map((p) => (
+                          <option key={p.id} value={p.id}>{p.name}</option>
+                        ))}
+                      </optgroup>
+                    )}
                   </select>
                 </Field>
               )}
@@ -516,7 +513,7 @@ export function NewKitModal({ open, onClose, onCreated }: Props) {
                           productsLoading={productsLoading}
                           productsError={productsError}
                           onRetry={fetchProducts}
-                          onCreateNew={() => setProductModalOpen(true)}
+                          onCreateNew={(tab) => { setProductModalInitialType(tab === 'CLOTHES' ? 'clothes' : 'food'); setProductModalOpen(true); }}
                           selectedId={item.productId}
                           selectedType={item.productType}
                           onSelect={(id, type, unit) => selectProduct(item.id, id, type, unit)}
@@ -606,6 +603,7 @@ export function NewKitModal({ open, onClose, onCreated }: Props) {
         open={productModalOpen}
         onClose={() => setProductModalOpen(false)}
         onCreated={handleProductCreated}
+        initialType={productModalInitialType}
       />
     </>
   );

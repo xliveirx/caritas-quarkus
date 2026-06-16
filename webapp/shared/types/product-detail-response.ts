@@ -1,3 +1,5 @@
+import type { AttributeResponse } from './attribute-response';
+
 export interface ClothesProductDetail {
   type: 'CLOTHES';
   id: number;
@@ -5,10 +7,7 @@ export interface ClothesProductDetail {
   description: string | null;
   active: boolean;
   defaultUnit: string | null;
-  size: string | null;
-  category: string | null;
-  gender: string | null;
-  condition: 'NOVO' | 'USADO';
+  attributes: AttributeResponse[];
 }
 
 export interface FoodProductDetail {

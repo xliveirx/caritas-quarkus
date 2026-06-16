@@ -1,19 +1,17 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/contexts/toast-context';
 import { api } from '@/services/api';
 import { Field, inputClass } from '@/components/ui/field';
+import { useAttributes } from '@/hooks/use-attributes';
+import type { AttributeType } from '@/shared/types/attribute-response';
 import type { ProductResponse } from '@/shared/types/product-response';
 import type { ApiErrorResponse } from '@/shared/types/api-error-response';
 
 type ProductType = 'clothes' | 'food';
 
-const SIZES    = ['P', 'M', 'G', 'GG', 'GGG'];
-const CATEGORIES = ['CALCA', 'CAMISETA', 'MOLETOM', 'CASACO', 'TENIS', 'SAPATO', 'BOTA', 'ACESSORIO', 'JAQUETA'];
-const GENDERS  = [{ value: 'MASCULINO', label: 'Masculino' }, { value: 'FEMININO', label: 'Feminino' }, { value: 'UNISSEX', label: 'Unissex' }];
-const CONDITIONS = [{ value: 'NOVO', label: 'Novo' }, { value: 'USADO', label: 'Usado' }];
 const UNITS = [
   { value: 'KG',       label: 'kg — quilograma' },
   { value: 'G',        label: 'g — grama' },
@@ -22,34 +20,45 @@ const UNITS = [
   { value: 'UNIDADES', label: 'Unidades' },
 ];
 
-const categoryLabel: Record<string, string> = {
-  CALCA: 'Calça', CAMISETA: 'Camiseta', MOLETOM: 'Moletom', CASACO: 'Casaco',
-  TENIS: 'Tênis', SAPATO: 'Sapato', BOTA: 'Bota', ACESSORIO: 'Acessório', JAQUETA: 'Jaqueta',
+const ATTR_LABELS: Record<AttributeType, string> = {
+  SIZE: 'Tamanho', CATEGORY: 'Categoria', GENDER: 'Gênero', CONDITION: 'Condição',
 };
 
 interface Props {
   open: boolean;
   onClose: () => void;
   onCreated: (product: ProductResponse) => void;
+  initialType?: ProductType;
 }
 
-export function NewProductModal({ open, onClose, onCreated }: Props) {
+export function NewProductModal({ open, onClose, onCreated, initialType }: Props) {
   const { token } = useAuth();
   const toast = useToast();
+  const { attributes, loading: attrLoading } = useAttributes();
 
-  const [type, setType] = useState<ProductType>('clothes');
+  const [type, setType] = useState<ProductType>(initialType ?? 'clothes');
+
+  useEffect(() => {
+    if (open) setType(initialType ?? 'clothes');
+  }, [open, initialType]);
   const [isPending, setIsPending] = useState(false);
 
   /* Clothes */
-  const [clothesForm, setClothesForm] = useState({ name: '', description: '', size: '', category: '', gender: '', condition: '' });
-  const [clothesErrors, setClothesErrors] = useState<Partial<Record<keyof typeof clothesForm, string>>>({});
+  const [clothesName, setClothesName]               = useState('');
+  const [clothesDesc, setClothesDesc]               = useState('');
+  const [selectedAttrs, setSelectedAttrs]           = useState<Record<AttributeType, number | ''>>({
+    SIZE: '', CATEGORY: '', GENDER: '', CONDITION: '',
+  });
+  const [clothesErrors, setClothesErrors] = useState<{ name?: string }>({});
 
   /* Food */
   const [foodForm, setFoodForm] = useState({ name: '', description: '', batch: '', expirationDate: '', defaultUnit: '' });
   const [foodErrors, setFoodErrors] = useState<Partial<Record<keyof typeof foodForm, string>>>({});
 
   function resetForms() {
-    setClothesForm({ name: '', description: '', size: '', category: '', gender: '', condition: '' });
+    setClothesName('');
+    setClothesDesc('');
+    setSelectedAttrs({ SIZE: '', CATEGORY: '', GENDER: '', CONDITION: '' });
     setClothesErrors({});
     setFoodForm({ name: '', description: '', batch: '', expirationDate: '', defaultUnit: '' });
     setFoodErrors({});
@@ -61,9 +70,8 @@ export function NewProductModal({ open, onClose, onCreated }: Props) {
   }
 
   function validateClothes() {
-    const e: typeof clothesErrors = {};
-    if (!clothesForm.name.trim()) e.name = 'Nome obrigatório';
-    if (!clothesForm.condition) e.condition = 'Condição obrigatória';
+    const e: { name?: string } = {};
+    if (!clothesName.trim()) e.name = 'Nome obrigatório';
     setClothesErrors(e);
     return Object.keys(e).length === 0;
   }
@@ -86,13 +94,11 @@ export function NewProductModal({ open, onClose, onCreated }: Props) {
     try {
       let created: ProductResponse;
       if (type === 'clothes') {
+        const attributeIds = (Object.values(selectedAttrs).filter(Boolean) as number[]);
         const res = await api.post<ProductResponse>('/api/v1/products/clothes', {
-          name: clothesForm.name.trim(),
-          description: clothesForm.description.trim() || null,
-          size: clothesForm.size || null,
-          category: clothesForm.category || null,
-          gender: clothesForm.gender || null,
-          condition: clothesForm.condition,
+          name: clothesName.trim(),
+          description: clothesDesc.trim() || null,
+          attributeIds,
         }, token);
         created = { ...res, type: 'CLOTHES' };
       } else {
@@ -122,7 +128,7 @@ export function NewProductModal({ open, onClose, onCreated }: Props) {
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
       <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm" 
         onClick={() => { if (!isPending) handleClose(); }}
         aria-hidden="true"
       />
@@ -172,43 +178,35 @@ export function NewProductModal({ open, onClose, onCreated }: Props) {
               <>
                 <Field label="Nome" required error={clothesErrors.name}>
                   <input type="text" placeholder="Ex: Camiseta branca" disabled={isPending}
-                    value={clothesForm.name}
-                    onChange={(e) => { setClothesForm((f) => ({ ...f, name: e.target.value })); setClothesErrors((e2) => ({ ...e2, name: undefined })); }}
+                    value={clothesName}
+                    onChange={(e) => { setClothesName(e.target.value); setClothesErrors({}); }}
                     className={inputClass} />
                 </Field>
-                <Field label="Descrição" error={clothesErrors.description}>
+                <Field label="Descrição">
                   <input type="text" placeholder="Opcional" disabled={isPending}
-                    value={clothesForm.description}
-                    onChange={(e) => setClothesForm((f) => ({ ...f, description: e.target.value }))}
+                    value={clothesDesc}
+                    onChange={(e) => setClothesDesc(e.target.value)}
                     className={inputClass} />
                 </Field>
                 <div className="grid grid-cols-2 gap-4">
-                  <Field label="Tamanho">
-                    <select value={clothesForm.size} onChange={(e) => setClothesForm((f) => ({ ...f, size: e.target.value }))} disabled={isPending} className={inputClass}>
-                      <option value="">Nenhum</option>
-                      {SIZES.map((s) => <option key={s} value={s}>{s}</option>)}
-                    </select>
-                  </Field>
-                  <Field label="Categoria">
-                    <select value={clothesForm.category} onChange={(e) => setClothesForm((f) => ({ ...f, category: e.target.value }))} disabled={isPending} className={inputClass}>
-                      <option value="">Nenhuma</option>
-                      {CATEGORIES.map((c) => <option key={c} value={c}>{categoryLabel[c]}</option>)}
-                    </select>
-                  </Field>
-                  <Field label="Gênero">
-                    <select value={clothesForm.gender} onChange={(e) => setClothesForm((f) => ({ ...f, gender: e.target.value }))} disabled={isPending} className={inputClass}>
-                      <option value="">Nenhum</option>
-                      {GENDERS.map((g) => <option key={g.value} value={g.value}>{g.label}</option>)}
-                    </select>
-                  </Field>
-                  <Field label="Condição" required error={clothesErrors.condition}>
-                    <select value={clothesForm.condition}
-                      onChange={(e) => { setClothesForm((f) => ({ ...f, condition: e.target.value })); setClothesErrors((e2) => ({ ...e2, condition: undefined })); }}
-                      disabled={isPending} className={inputClass}>
-                      <option value="">Selecione</option>
-                      {CONDITIONS.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
-                    </select>
-                  </Field>
+                  {(['SIZE', 'CATEGORY', 'GENDER', 'CONDITION'] as AttributeType[]).map((attrType) => (
+                    <Field key={attrType} label={ATTR_LABELS[attrType]}>
+                      <select
+                        value={selectedAttrs[attrType]}
+                        onChange={(e) => setSelectedAttrs((prev) => ({
+                          ...prev,
+                          [attrType]: e.target.value ? Number(e.target.value) : '',
+                        }))}
+                        disabled={isPending || attrLoading}
+                        className={inputClass}
+                      >
+                        <option value="">Nenhum</option>
+                        {attributes[attrType].map((a) => (
+                          <option key={a.id} value={a.id}>{a.label}</option>
+                        ))}
+                      </select>
+                    </Field>
+                  ))}
                 </div>
               </>
             ) : (

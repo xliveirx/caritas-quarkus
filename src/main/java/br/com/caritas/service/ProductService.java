@@ -2,15 +2,19 @@ package br.com.caritas.service;
 
 import br.com.caritas.dto.ApiListDTO;
 import br.com.caritas.dto.PaginationDTO;
-import br.com.caritas.dto.donation.*;
+import br.com.caritas.dto.donation.ClothesRequestDTO;
+import br.com.caritas.dto.donation.ClothesResponseDTO;
+import br.com.caritas.dto.donation.FoodRequestDTO;
+import br.com.caritas.dto.donation.FoodResponseDTO;
+import br.com.caritas.entity.config.AttributeEntity;
 import br.com.caritas.entity.donation.*;
 import br.com.caritas.exception.ResourceNotFoundException;
 import io.quarkus.panache.common.Page;
-import io.quarkus.panache.common.Sort;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 
 import java.util.Comparator;
+import java.util.List;
 
 @ApplicationScoped
 public class ProductService {
@@ -18,7 +22,7 @@ public class ProductService {
     public ApiListDTO getAllClothes(int page, int size) {
 
         var query = ClothesProductEntity.<ClothesProductEntity>find(
-                "active = ?1 and type = ?2", Boolean.TRUE, ProductType.CLOTHES)
+                        "active = ?1 and type = ?2", Boolean.TRUE, ProductType.CLOTHES)
                 .page(Page.of(page, size));
 
 
@@ -83,13 +87,21 @@ public class ProductService {
 
         clothes.name = req.name();
         clothes.description = req.description();
-        clothes.size = req.size();
-        clothes.category = req.category();
-        clothes.gender = req.gender();
-        clothes.condition = req.condition();
         clothes.active = Boolean.TRUE;
         clothes.type = ProductType.CLOTHES;
         clothes.defaultUnit = Unit.UNIDADES;
+
+        List<AttributeEntity> attributes = AttributeEntity
+                .list("id IN ?1", req.attributeIds());
+
+        if (attributes.size() != req.attributeIds().size()) {
+            throw new ResourceNotFoundException(
+                    "Atributos não encontrados.",
+                    "Um ou mais atributos não foram encontrados."
+            );
+        }
+
+        clothes.attributes = attributes;
 
         clothes.persist();
 
