@@ -576,7 +576,7 @@ export function FamilyModal({ open, onClose, onSaved, family, parishes, isAdmin 
                     className={inputClass}
                   >
                     <option value="">Selecione uma paróquia</option>
-                    {parishes.map((p) => (
+                    {(parishes ?? []).map((p) => (
                       <option key={p.id} value={p.id}>{p.name}</option>
                     ))}
                   </select>

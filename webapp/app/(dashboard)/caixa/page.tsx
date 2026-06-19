@@ -188,7 +188,7 @@ export default function CaixaPage() {
     }
   }
 
-  const grouped = cashRegister ? groupByDate(cashRegister.movements) : new Map();
+  const grouped = cashRegister ? groupByDate(cashRegister.movements) : new Map<string, CashMovementResponse[]>();
 
   /* ── Render ── */
 

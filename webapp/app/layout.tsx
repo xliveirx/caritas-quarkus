@@ -17,9 +17,6 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: 'Cáritas Diocesana',
   description: 'Plataforma de gestão de voluntários e paróquias da Caritas.',
-  icons: {
-    icon: '/caritas.png',
-  },
 };
 
 export default function RootLayout({

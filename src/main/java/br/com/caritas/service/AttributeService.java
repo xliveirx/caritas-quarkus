@@ -75,7 +75,9 @@ public class AttributeService {
                         "Atributo não encontrado.",
                         "Não existe um atributo com o ID fornecido."));
 
-        if (ProductEntity.find("attribute.id = ?1", id).firstResultOptional().isPresent()) {
+        if (ProductEntity.find("SELECT p FROM ProductEntity p JOIN p.attributes a WHERE a.id = ?1", id)
+                .firstResultOptional()
+                .isPresent()) {
             throw new BusinessRuleException(
                     "Erro ao excluir atributo.",
                     "Não é possível excluir um atributo que está associado a um produto.");

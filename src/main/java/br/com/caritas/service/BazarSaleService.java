@@ -11,6 +11,7 @@ import br.com.caritas.entity.donation.StockItemEntity;
 import br.com.caritas.entity.parish.ParishEntity;
 import br.com.caritas.exception.BusinessRuleException;
 import br.com.caritas.exception.ResourceNotFoundException;
+import br.com.caritas.util.CaritasUtil;
 import br.com.caritas.util.JwtParishContext;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -71,6 +72,14 @@ public class BazarSaleService {
         BazarSaleEntity sale = new BazarSaleEntity();
 
         sale.buyerName = req.buyerName();
+
+        if(!CaritasUtil.isCpfValid(req.buyerCpf())) {
+            throw new BusinessRuleException(
+                    "CPF inválido.",
+                    "O CPF informado não é válido."
+            );
+        }
+
         sale.buyerCpf = req.buyerCpf();
         sale.soldAt = LocalDateTime.now();
         sale.total = BigDecimal.ZERO;
