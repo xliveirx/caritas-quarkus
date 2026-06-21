@@ -18,6 +18,9 @@ public class CashMovementEntity extends PanacheEntity {
     @Column(name = "origin", nullable = false)
     public CashMovementOrigin origin;
 
+    @Column(name = "description")
+    public String description;
+
     @Column(name = "reference_id")
     public Long referenceId;
 

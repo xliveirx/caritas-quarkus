@@ -1,5 +1,7 @@
 package br.com.caritas.service;
 
+import br.com.caritas.dto.parish.CashMovementResponseDTO;
+import br.com.caritas.dto.parish.CashRegisterMovementRequestDTO;
 import br.com.caritas.dto.parish.CashRegisterResponseDTO;
 import br.com.caritas.entity.bazar.BazarSaleEntity;
 import br.com.caritas.entity.parish.CashMovementEntity;
@@ -13,7 +15,6 @@ import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.Comparator;
 
 @ApplicationScoped
 public class CashRegisterService {
@@ -62,5 +63,39 @@ public class CashRegisterService {
         cashRegister.movements.add(movement);
         cashRegister.balance = cashRegister.balance.add(sale.total);
         cashRegister.persist();
+    }
+
+    @Transactional
+    public CashMovementResponseDTO createCashRegisterMovement(CashRegisterMovementRequestDTO req) {
+
+        CashRegisterEntity cashRegister = CashRegisterEntity.<CashRegisterEntity>findByIdOptional(req.cashRegisterId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Caixa não encontrado",
+                        "Caixa não encontrado com id " + req.cashRegisterId()
+                ));
+
+        this.parishContext.requireSameParish(cashRegister.parish.id);
+
+        CashMovementEntity movement = new CashMovementEntity();
+
+        movement.type = req.type();
+        movement.origin = CashMovementOrigin.MANUAL;
+        movement.description = req.description();
+        movement.referenceId = null;
+        movement.cashRegister = cashRegister;
+        movement.occuredAt = LocalDateTime.now();
+        movement.amount = req.amount();
+        movement.persist();
+
+        if(movement.type.equals(CashMovementType.INCOME)) {
+            cashRegister.balance = cashRegister.balance.add(movement.amount);
+        } else {
+            cashRegister.balance = cashRegister.balance.subtract(movement.amount);
+        }
+
+        cashRegister.movements.add(movement);
+        cashRegister.persist();
+
+        return CashMovementResponseDTO.fromEntity(movement);
     }
 }

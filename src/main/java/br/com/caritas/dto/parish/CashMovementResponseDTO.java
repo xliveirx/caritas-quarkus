@@ -11,6 +11,7 @@ public record CashMovementResponseDTO(
         Long id,
         CashMovementType type,
         CashMovementOrigin origin,
+        String description,
         Long referenceId,
         LocalDateTime occuredAt,
         BigDecimal amount
@@ -20,6 +21,7 @@ public record CashMovementResponseDTO(
                 entity.id,
                 entity.type,
                 entity.origin,
+                entity.description,
                 entity.referenceId,
                 entity.occuredAt,
                 entity.amount

@@ -7,6 +7,7 @@ export interface CashMovementResponse {
   id: number;
   type: CashMovementType;
   origin: CashMovementOrigin;
+  description: string | null;
   referenceId: number | null;
   occuredAt: string;
   amount: number;

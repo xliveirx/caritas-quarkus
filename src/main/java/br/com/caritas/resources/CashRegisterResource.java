@@ -1,5 +1,6 @@
 package br.com.caritas.resources;
 
+import br.com.caritas.dto.parish.CashRegisterMovementRequestDTO;
 import br.com.caritas.service.CashRegisterService;
 import io.quarkus.security.Authenticated;
 import jakarta.annotation.Resource;
@@ -21,5 +22,14 @@ public class CashRegisterResource {
         var register = this.cashRegisterService.getCashRegister(parishId);
 
         return Response.ok(register).build();
+    }
+
+    @POST
+    @Authenticated
+    public Response createCashRegisterMovement(CashRegisterMovementRequestDTO req) {
+
+        var movement = this.cashRegisterService.createCashRegisterMovement(req);
+
+        return Response.ok(movement).build();
     }
 }

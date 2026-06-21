@@ -23,7 +23,7 @@ services:
       QUARKUS_DATASOURCE_JDBC_URL: jdbc:postgresql://postgres:5432/caritas-db
       QUARKUS_HIBERNATE_ORM_SCHEMA_MANAGEMENT_STRATEGY: update
       QUARKUS_HIBERNATE_ORM_SCHEMA_MANAGEMENT_CREATE_SCHEMAS: "true"
-      QUARKUS_MAILER_MOCK: "true"
+      QUARKUS_MAILER_MOCK: "false"
     depends_on:
       postgres:
         condition: service_healthy

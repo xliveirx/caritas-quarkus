@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { api } from '@/services/api';
 import { BazarSaleDrawer } from '@/components/bazar-sale-drawer';
+import { CashMovementModal } from '@/components/cash-movement-modal';
 import type { CashRegisterResponse, CashMovementResponse } from '@/shared/types/cash-register-response';
 import type { BazarSaleResponse } from '@/shared/types/bazar-sale-response';
 import type { ParishResponse } from '@/shared/types/parish-response';
@@ -100,6 +101,9 @@ function MovementItem({
             <span className="ml-2 text-slate-300">· Ref. #{movement.referenceId}</span>
           )}
         </p>
+        {movement.description && (
+          <p className="text-xs text-slate-500 mt-0.5 truncate">{movement.description}</p>
+        )}
       </div>
 
       {/* Amount */}
@@ -136,6 +140,7 @@ export default function CaixaPage() {
 
   const [drawerSale, setDrawerSale]       = useState<BazarSaleResponse | null>(null);
   const [loadingDetail, setLoadingDetail] = useState<number | null>(null);
+  const [movementModalOpen, setMovementModalOpen] = useState(false);
 
   /* fetch parishes for admin selector */
   useEffect(() => {
@@ -202,7 +207,24 @@ export default function CaixaPage() {
           <p className="text-sm text-slate-500 mt-0.5">Saldo e movimentações financeiras</p>
         </div>
 
-        {isAdmin && (
+        <div className="flex items-center gap-3">
+          {cashRegister && (
+            <button
+              onClick={() => setMovementModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white
+                bg-wine-800 hover:bg-wine-900 rounded-lg transition-colors duration-150
+                focus:outline-none focus-visible:ring-2 focus-visible:ring-wine-700"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                className="w-4 h-4">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+              Registrar movimentação
+            </button>
+          )}
+
+          {isAdmin && (
           <select
             value={selectedParishId}
             onChange={(e) => setSelectedParishId(e.target.value)}
@@ -226,7 +248,8 @@ export default function CaixaPage() {
               </optgroup>
             )}
           </select>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Admin — no parish selected yet */}
@@ -383,6 +406,15 @@ export default function CaixaPage() {
       )}
 
       <BazarSaleDrawer sale={drawerSale} onClose={() => setDrawerSale(null)} />
+
+      {cashRegister && (
+        <CashMovementModal
+          open={movementModalOpen}
+          onClose={() => setMovementModalOpen(false)}
+          cashRegisterId={cashRegister.id}
+          onSaved={() => fetchCashRegister()}
+        />
+      )}
     </div>
   );
 }
