@@ -10,6 +10,8 @@ import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Response;
 
+import java.net.URI;
+
 @Resource
 @Path("/api/v1/products")
 public class ProductResource {
@@ -64,9 +66,12 @@ public class ProductResource {
     @Path("/clothes")
     public Response createClothes(@Valid ClothesRequestDTO req) {
 
-        var product = this.productService.createClothes(req);
+        var clothes = this.productService.createClothes(req);
 
-        return Response.ok(product).build();
+        return Response
+                .created(URI.create("/api/v1/products/clothes/" + clothes.id()))
+                .entity(clothes)
+                .build();
     }
 
     @POST
@@ -76,7 +81,10 @@ public class ProductResource {
 
         var food = this.productService.createFood(req);
 
-        return Response.ok(food).build();
+        return Response
+                .created(URI.create("/api/v1/products/foods/" + food.id()))
+                .entity(food)
+                .build();
     }
 
     @PATCH

@@ -11,6 +11,8 @@ import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Response;
 
+import java.net.URI;
+
 @ApplicationScoped
 @Path("/api/v1/volunteers")
 public class VolunteerResource {
@@ -48,7 +50,10 @@ public class VolunteerResource {
 
         var volunteer = this.volunteerService.createVolunteer(req);
 
-        return Response.ok(volunteer).build();
+        return Response
+                .created(URI.create("/api/v1/volunteers/" + volunteer.id()))
+                .entity(volunteer)
+                .build();
     }
 
     @PUT

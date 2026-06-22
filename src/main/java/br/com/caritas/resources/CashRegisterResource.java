@@ -8,6 +8,8 @@ import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Response;
 
+import java.net.URI;
+
 @Resource
 @Path("/api/v1/cash-register")
 public class CashRegisterResource {
@@ -30,6 +32,8 @@ public class CashRegisterResource {
 
         var movement = this.cashRegisterService.createCashRegisterMovement(req);
 
-        return Response.ok(movement).build();
+        return Response
+                .created(URI.create("/api/v1/cash-register/" + movement.id()))
+                .entity(movement).build();
     }
 }

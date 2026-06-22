@@ -6,8 +6,11 @@ import br.com.caritas.service.DonationEntryService;
 import io.quarkus.security.Authenticated;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Response;
+
+import java.net.URI;
 
 @ApplicationScoped
 @Path("/api/v1/donations/entries")
@@ -30,11 +33,14 @@ public class DonationEntryResource {
 
     @POST
     @Authenticated
-    public Response createDonationEntry(DonationEntryRequestDTO req) {
+    public Response createDonationEntry(@Valid DonationEntryRequestDTO req) {
 
         var donation = this.donationEntryService.createDonationEntry(req);
 
-        return Response.ok(donation).build();
+        return Response
+                .created(URI.create("/api/v1/donations/entries/" + donation.id()))
+                .entity(donation)
+                .build();
     }
 
     @PATCH

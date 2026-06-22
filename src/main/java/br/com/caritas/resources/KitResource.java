@@ -5,8 +5,11 @@ import br.com.caritas.service.KitService;
 import io.quarkus.security.Authenticated;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Response;
+
+import java.net.URI;
 
 @ApplicationScoped
 @Path("/api/v1/kits")
@@ -30,11 +33,14 @@ public class KitResource {
 
     @POST
     @Authenticated
-    public Response createKit(KitRequestDTO req) {
+    public Response createKit(@Valid KitRequestDTO req) {
 
         var kit = this.kitService.createKit(req);
 
-        return Response.ok(kit).build();
+        return Response
+                .created(URI.create("/api/v1/kits/" + kit.id()))
+                .entity(kit)
+                .build();
     }
 
     @PATCH

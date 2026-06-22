@@ -10,6 +10,8 @@ import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Response;
 
+import java.net.URI;
+
 @ApplicationScoped
 @Path("/api/v1/donations/exits")
 public class DonationExitResource {
@@ -35,7 +37,10 @@ public class DonationExitResource {
 
         var donation = this.donationExitService.createDonationExit(req);
 
-        return Response.ok(donation).build();
+        return Response
+                .created(URI.create("/api/v1/donations/exits/" + donation.id()))
+                .entity(donation)
+                .build();
     }
 
     @PATCH

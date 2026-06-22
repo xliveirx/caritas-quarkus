@@ -72,8 +72,8 @@ public class ProductService {
 
         FoodProductEntity food = FoodProductEntity.<FoodProductEntity>findByIdOptional(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Clothes not found.",
-                        "Clothes not found with id " + id
+                        "Food not found.",
+                        "Food not found with id " + id
                 ));
 
         return FoodResponseDTO.fromEntity(food);

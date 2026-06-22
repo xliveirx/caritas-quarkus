@@ -12,6 +12,7 @@ import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Response;
 
 import java.math.BigDecimal;
+import java.net.URI;
 
 @ApplicationScoped
 @Path("/api/v1/families")
@@ -54,7 +55,10 @@ public class FamilyResource {
 
         var family = this.familyService.createFamily(req);
 
-        return Response.ok(family).build();
+        return Response
+                .created(URI.create("/api/v1/families/" + family.id()))
+                .entity(family)
+                .build();
     }
 
     @PUT
@@ -75,7 +79,7 @@ public class FamilyResource {
 
         this.familyService.deleteFamily(id);
 
-        return Response.ok().build();
+        return Response.noContent().build();
     }
 
 }

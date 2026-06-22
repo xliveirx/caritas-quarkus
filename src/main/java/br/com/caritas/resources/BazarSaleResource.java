@@ -10,6 +10,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
 import java.math.BigDecimal;
+import java.net.URI;
 import java.time.LocalDate;
 
 @Path("/api/v1/bazar")
@@ -53,6 +54,8 @@ public class BazarSaleResource {
 
         var sale = this.bazarSaleService.createBazarSale(req);
 
-        return Response.ok(sale).build();
+        return Response.created(URI.create("/api/v1/bazar/" + sale.id()))
+                .entity(sale)
+                .build();
     }
 }

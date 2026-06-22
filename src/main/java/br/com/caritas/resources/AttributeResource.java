@@ -11,6 +11,8 @@ import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Response;
 
+import java.net.URI;
+
 @Resource
 @Path("/api/v1/attributes")
 public class AttributeResource {
@@ -36,7 +38,9 @@ public class AttributeResource {
 
         var attribute = this.attributeService.createAttribute(req);
 
-        return Response.ok(attribute).build();
+        return Response.created(URI.create("/api/v1/attributes/" + attribute.id()))
+                .entity(attribute)
+                .build();
     }
 
     @PUT

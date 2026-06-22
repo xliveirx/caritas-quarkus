@@ -16,6 +16,7 @@ import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.UUID;
 
 @ApplicationScoped
@@ -27,13 +28,14 @@ public class AuthService {
     @Inject
     private EmailService emailService;
 
+    @Transactional
     public LoginResponseDTO login(LoginRequestDTO req) {
 
         UserEntity user = UserEntity.<UserEntity>find("email = ?1 and active = ?2", req.email(), Boolean.TRUE)
                 .firstResultOptional()
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "User not found.",
-                        "User with email " + req.email() + " not found"));
+                .orElseThrow(() -> new AuthException(
+                        "Authentication error.",
+                        "Password or e-mail is incorrect."));
 
         if(!BcryptUtil.matches(req.password(), user.password)){
             throw new AuthException(
@@ -67,7 +69,7 @@ public class AuthService {
             );
         }
 
-        if(user.resetTokenExpiresAt.isBefore(LocalDateTime.now())) {
+        if(user.resetTokenExpiresAt.isBefore(LocalDateTime.now(ZoneOffset.UTC))) {
             throw new AuthException(
                     "Invalid token.",
                     "The token has expired."
@@ -100,7 +102,7 @@ public class AuthService {
 
         String token = UUID.randomUUID().toString();
         user.resetToken = BcryptUtil.bcryptHash(token);
-        user.resetTokenExpiresAt = LocalDateTime.now().plusMinutes(15);
+        user.resetTokenExpiresAt = LocalDateTime.now(ZoneOffset.UTC).plusMinutes(15);
         user.persist();
 
         String parishName = resolveParishName(user);
@@ -133,7 +135,8 @@ public class AuthService {
 
         String token = UUID.randomUUID().toString();
         user.resetToken = BcryptUtil.bcryptHash(token);
-        user.resetTokenExpiresAt = LocalDateTime.now().plusMinutes(15);
+        user.resetTokenExpiresAt = LocalDateTime.now(ZoneOffset.UTC).plusMinutes(15);
+        user.persist();
 
         this.emailService.sendResetPasswordEmail(
                 user.name,

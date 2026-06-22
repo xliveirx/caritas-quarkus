@@ -17,6 +17,7 @@ import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.Comparator;
 import java.util.UUID;
 
@@ -72,7 +73,7 @@ public class CoordinatorService {
 
         String token = UUID.randomUUID().toString();
         coordinator.resetToken = BcryptUtil.bcryptHash(token);
-        coordinator.resetTokenExpiresAt = LocalDateTime.now().plusMinutes(15);
+        coordinator.resetTokenExpiresAt = LocalDateTime.now(ZoneOffset.UTC).plusMinutes(15);
 
         ParishEntity parish = ParishEntity.<ParishEntity>find("id = ?1 and isDiocese = ?2", req.parishId(), Boolean.FALSE)
                 .firstResultOptional()

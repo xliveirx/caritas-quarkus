@@ -10,6 +10,8 @@ import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Response;
 
+import java.net.URI;
+
 @Resource
 @Path("/api/v1/parishes")
 public class ParishResource {
@@ -44,7 +46,10 @@ public class ParishResource {
 
         var parish = this.parishService.createParish(req);
 
-        return Response.ok(parish).build();
+        return Response
+                .created(URI.create("/api/v1/parishes/" + parish.id()))
+                .entity(parish)
+                .build();
     }
 
     @PUT

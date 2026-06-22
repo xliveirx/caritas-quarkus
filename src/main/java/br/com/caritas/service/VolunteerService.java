@@ -17,6 +17,7 @@ import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.Comparator;
 import java.util.UUID;
 
@@ -80,7 +81,7 @@ public class VolunteerService {
 
         String token = UUID.randomUUID().toString();
         volunteer.resetToken = BcryptUtil.bcryptHash(token);
-        volunteer.resetTokenExpiresAt = LocalDateTime.now().plusMinutes(15);
+        volunteer.resetTokenExpiresAt = LocalDateTime.now(ZoneOffset.UTC).plusMinutes(15);
 
         volunteer.parish = parishContext.resolveParish(req.parishId());
 

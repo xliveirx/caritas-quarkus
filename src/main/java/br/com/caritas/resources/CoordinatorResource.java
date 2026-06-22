@@ -11,6 +11,8 @@ import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Response;
 
+import java.net.URI;
+
 @Resource
 @Path("/api/v1/coordinators")
 public class CoordinatorResource {
@@ -46,7 +48,10 @@ public class CoordinatorResource {
 
         var coordinator = this.coordinatorService.createCoordinator(req);
 
-        return Response.ok(coordinator).build();
+        return Response
+                .created(URI.create("/api/v1/coordinator/" + coordinator.id()))
+                .entity(coordinator)
+                .build();
     }
 
 

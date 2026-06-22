@@ -2,6 +2,7 @@ package br.com.caritas.resources;
 
 import br.com.caritas.dto.user.UserUpdateDTO;
 import br.com.caritas.service.UserService;
+import io.quarkus.security.Authenticated;
 import jakarta.annotation.Resource;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;
@@ -21,6 +22,7 @@ public class UserResource {
     private UserService userService;
 
     @GET
+    @Authenticated
     public Response getUserById() {
 
         var user = this.userService.getUserById(jwt);
@@ -29,6 +31,7 @@ public class UserResource {
     }
 
     @PUT
+    @Authenticated
     public Response updateUser(UserUpdateDTO req) {
 
         var user = this.userService.updateUser(req, jwt);

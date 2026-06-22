@@ -11,6 +11,8 @@ import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Response;
 
+import java.net.URI;
+
 @ApplicationScoped
 @Path("/api/v1/visits")
 public class VisitResource {
@@ -48,7 +50,10 @@ public class VisitResource {
 
         var visit = this.visitService.createVisit(req);
 
-        return Response.ok(visit).build();
+        return Response
+                .created(URI.create("/api/v1/visits/" + visit.id()))
+                .entity(visit)
+                .build();
     }
 
     @PUT
