@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 
 @Entity
@@ -34,5 +35,5 @@ public class UserEntity extends PanacheEntity {
     public String resetToken;
 
     @Column(name = "reset_token_expires_at")
-    public LocalDateTime resetTokenExpiresAt;
+    public Instant resetTokenExpiresAt;
 }

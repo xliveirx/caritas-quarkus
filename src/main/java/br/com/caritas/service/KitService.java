@@ -55,8 +55,8 @@ public class KitService {
                             "id = ?1 and active = ?2", item.productId(), Boolean.TRUE)
                     .firstResultOptional()
                     .orElseThrow(() -> new ResourceNotFoundException(
-                            "Product not found",
-                            "Product not found with id " + item.productId()
+                            "Produto não encontrado.",
+                            "Produto não encontrado com id " + item.productId()
                     ));
 
             kitItem.product = product;
@@ -75,8 +75,8 @@ public class KitService {
         KitEntity kit = KitEntity.<KitEntity>find("id = ?1 and active = ?2", id, Boolean.TRUE)
                 .firstResultOptional()
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Kit not found",
-                        "Kit not found with id " + id
+                        "Cesta básica não encontrada.",
+                        "Cesta básica não encontrada com id " + id
                 ));
 
         parishContext.requireSameParish(kit.parish.id);
@@ -91,8 +91,8 @@ public class KitService {
         KitEntity kit = KitEntity.<KitEntity>find("id = ?1 and active = ?2", id, Boolean.FALSE)
                 .firstResultOptional()
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Kit not found",
-                        "Kit not found with id " + id
+                        "Cesta básica não encontrada.",
+                        "Cesta básica não encontrada com id " + id
                 ));
 
         parishContext.requireSameParish(kit.parish.id);

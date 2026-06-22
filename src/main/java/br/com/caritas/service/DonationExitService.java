@@ -56,15 +56,15 @@ public class DonationExitService {
                 "id = ?1 and parish.id = ?2", req.familyId(), donation.parish.id)
                 .firstResultOptional()
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Family not found.",
-                        "Family not found with id " + req.familyId()));
+                        "Família não encontrada.",
+                        "Família não encontrada com id " + req.familyId()));
 
         KitEntity kit = KitEntity.<KitEntity>find(
                 "id = ?1 and active = ?2 and parish.id = ?3", req.kitId(), Boolean.TRUE, donation.parish.id)
                 .firstResultOptional()
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Kit not found.",
-                        "Kit not found with id " + req.kitId()
+                        "Cesta básica não encontrada.",
+                        "Cesta básica não encontrada com id " + req.kitId()
                 ));
 
         donation.family = family;
@@ -77,17 +77,17 @@ public class DonationExitService {
                     "parish.id = ?1 and product.id = ?2", donation.parish.id, item.product.id)
                     .firstResultOptional()
                     .orElseThrow(() -> new ResourceNotFoundException(
-                            "Stock item not found.",
-                            "Stock item not found with product id " + item.product.id + " and parish id " + donation.parish.id
+                            "Item de estoque não encontrado.",
+                            "Item de estoque não encontrado com id " + item.product.id + " e id da paróquia " + donation.parish.id
                     ));
 
             BigDecimal totalQuantity = item.quantity.multiply(req.quantity());
 
             if (totalQuantity.compareTo(stockItem.availableQuantity) > 0) {
                 throw new BusinessRuleException(
-                        "Invalid quantity",
-                        "Theres not enough stock items to donate. Requested quantity is " + totalQuantity +
-                                " | Available quantity is " + stockItem.availableQuantity
+                        "Quantidade inválida.",
+                        "Não existe itens suficientes no estoque. Quantidade solicitada " + totalQuantity +
+                                " | Quantidade disponível " + stockItem.availableQuantity
                 );
             }
 
@@ -113,16 +113,16 @@ public class DonationExitService {
                 .firstResultOptional()
                 .filter(d -> parishContext.canAccess(d.parish.id))
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Donation not found.",
-                        "Donation not found with id " + id
+                        "Doação não encontrada.",
+                        "Doação não encontrada com id " + id
                 ));
 
         donation.batches.forEach(batch -> {
 
             StockItemEntity stockItem = StockItemEntity.<StockItemEntity>findByIdOptional(batch.stockItem.id)
                     .orElseThrow(() -> new ResourceNotFoundException(
-                            "Stock item not found.",
-                            "Stock item not found with id " + batch.stockItem.id
+                            "Item de estoque não encontrado.",
+                            "Item de estoque não encontrado com id " + batch.stockItem.id
                     ));
 
             stockItem.availableQuantity = stockItem.availableQuantity.add(batch.quantity);

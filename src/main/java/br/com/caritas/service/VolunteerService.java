@@ -16,8 +16,9 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
 import java.util.UUID;
 
@@ -55,8 +56,8 @@ public class VolunteerService {
         var volunteer = VolunteerEntity.<VolunteerEntity>find("id = ?1 and active = ?2", id, Boolean.TRUE)
                 .firstResultOptional()
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Volunteer not found.",
-                        "Volunteer with id " + id + " not found."
+                        "Voluntário não encontrado.",
+                        "Voluntário não encontrado com id" + id
                 ));
 
         parishContext.requireSameParish(volunteer.parish.id);
@@ -71,8 +72,8 @@ public class VolunteerService {
                 .firstResultOptional()
                 .ifPresent(user -> {
                     throw new BusinessRuleException(
-                            "E-mail error",
-                            "The informed e-mail has already been registered");
+                            "Erro de e-mail.",
+                            "E-mail " + req.email() +  " já existe no sistema.");
                 });
 
         VolunteerEntity volunteer = new VolunteerEntity();
@@ -81,7 +82,7 @@ public class VolunteerService {
 
         String token = UUID.randomUUID().toString();
         volunteer.resetToken = BcryptUtil.bcryptHash(token);
-        volunteer.resetTokenExpiresAt = LocalDateTime.now(ZoneOffset.UTC).plusMinutes(15);
+        volunteer.resetTokenExpiresAt = Instant.now().plus(15, ChronoUnit.MINUTES);
 
         volunteer.parish = parishContext.resolveParish(req.parishId());
 
@@ -105,8 +106,8 @@ public class VolunteerService {
         var volunteer = VolunteerEntity.<VolunteerEntity>find("id = ?1 and active = ?2", id, Boolean.TRUE)
                 .firstResultOptional()
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Volunteer not found.",
-                        "Volunteer with id " + id + " not found."
+                        "Voluntário não encontrado.",
+                        "Voluntário não encontrado com id" + id
                 ));
 
         parishContext.requireSameParish(volunteer.parish.id);
@@ -126,8 +127,8 @@ public class VolunteerService {
         var volunteer = VolunteerEntity.<VolunteerEntity>find("id = ?1 and active = ?2", id, Boolean.TRUE)
                 .firstResultOptional()
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "User not found.",
-                        "User with id " + id + " not found."));
+                        "Usuário não encontrado.",
+                        "Usuário não encontrado com id" + id));
 
         parishContext.requireSameParish(volunteer.parish.id);
 
@@ -143,8 +144,8 @@ public class VolunteerService {
                 "id = ?1 and active = ?2 and password is not null", id, Boolean.FALSE)
                 .firstResultOptional()
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "User not found.",
-                        "User with id " + id + " not found."));
+                        "Usuário não encontrado.",
+                        "Usuário não encontrado com id" + id));
 
         parishContext.requireSameParish(volunteer.parish.id);
 

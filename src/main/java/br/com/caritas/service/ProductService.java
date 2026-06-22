@@ -61,8 +61,8 @@ public class ProductService {
 
         ClothesProductEntity clothes = ClothesProductEntity.<ClothesProductEntity>findByIdOptional(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Clothes not found.",
-                        "Clothes not found with id " + id
+                        "Roupa não encontrada.",
+                        "Roupa não encontrada com id " + id
                 ));
 
         return ClothesResponseDTO.fromEntity(clothes);
@@ -72,8 +72,8 @@ public class ProductService {
 
         FoodProductEntity food = FoodProductEntity.<FoodProductEntity>findByIdOptional(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Food not found.",
-                        "Food not found with id " + id
+                        "Alimento não encontrado.",
+                        "Alimento não encontrado com id " + id
                 ));
 
         return FoodResponseDTO.fromEntity(food);
@@ -132,8 +132,8 @@ public class ProductService {
         ProductEntity product = ProductEntity.<ProductEntity>find("id = ?1 and active = ?2", id, Boolean.TRUE)
                 .firstResultOptional()
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Product not found.",
-                        "Product with id " + id + " not found."
+                        "Produto não encontrado.",
+                        "Produto não encontrado com id " + id
                 ));
 
         product.active = Boolean.FALSE;
@@ -146,8 +146,8 @@ public class ProductService {
         ProductEntity product = ProductEntity.<ProductEntity>find("id = ?1 and active = ?2", id, Boolean.FALSE)
                 .firstResultOptional()
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Product not found.",
-                        "Product with id " + id + " not found."
+                        "Produto não encontrado.",
+                        "Produto não encontrado com id " + id
                 ));
 
         product.active = Boolean.TRUE;

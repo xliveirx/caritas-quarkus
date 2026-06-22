@@ -59,8 +59,8 @@ public class FamilyService {
         FamilyEntity family = FamilyEntity.<FamilyEntity>findByIdOptional(id)
                 .filter(f -> parishContext.canAccess(f.parish.id))
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Family not found.",
-                        "Family with id " + id + " not found."));
+                        "Família não encontrada.",
+                        "Família não encontrada com id " + id));
 
         return FamilyResponseDTO.fromEntity(family);
     }
@@ -76,16 +76,10 @@ public class FamilyService {
                 .filter(FamilyMemberRequestDTO::responsible)
                 .count();
 
-        if (responsibleCount == 0) {
+        if (responsibleCount != 1) {
             throw new BusinessRuleException(
-                    "No responsible.",
-                    "There must be at least one responsible in the family.");
-        }
-
-        if (responsibleCount > 1) {
-            throw new BusinessRuleException(
-                    "Multiple responsibles.",
-                    "There must be at most one responsible in the family.");
+                    "Quantidade de responsáveis inválida.",
+                    "Deve existir apenas 1 responsável na família.");
         }
 
         family.monthlyIncome = req.monthlyIncome();
@@ -112,8 +106,8 @@ public class FamilyService {
 
             if (m.cpf() != null && !CaritasUtil.isCpfValid(m.cpf())) {
                 throw new BusinessRuleException(
-                        "Invalid CPF.",
-                        "The CPF " + m.cpf() + " is not valid.");
+                        "CPF inválido.",
+                        "O CPF " + m.cpf() + " não é válido.");
             }
             member.cpf = m.cpf();
             member.birthDate = m.birthDate();
@@ -134,8 +128,8 @@ public class FamilyService {
         FamilyEntity family = FamilyEntity.<FamilyEntity>findByIdOptional(id)
                 .filter(f -> parishContext.canAccess(f.parish.id))
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Family not found.",
-                        "Family with id " + id + " not found."));
+                        "Família não encontrada.",
+                        "Família não encontrada com id " + id));
 
         if (req.monthlyIncome() != null) {
             family.monthlyIncome = req.monthlyIncome();
@@ -188,8 +182,8 @@ public class FamilyService {
 
                     if (m.cpf() != null && !CaritasUtil.isCpfValid(m.cpf())) {
                         throw new BusinessRuleException(
-                                "Invalid CPF.",
-                                "The CPF " + m.cpf() + " is not valid."
+                                "CPF inválido.",
+                                "O CPF " + m.cpf() + " não é válido."
                         );
                     }
 
@@ -209,8 +203,8 @@ public class FamilyService {
 
                                 if (m.cpf() != null && !CaritasUtil.isCpfValid(m.cpf())) {
                                     throw new BusinessRuleException(
-                                            "Invalid CPF.",
-                                            "The CPF " + m.cpf() + " is not valid."
+                                            "CPF inválido.",
+                                            "O CPF " + m.cpf() + " não é válido."
                                     );
                                 }
                                 member.cpf = m.cpf();
@@ -232,8 +226,8 @@ public class FamilyService {
         FamilyEntity family = FamilyEntity.<FamilyEntity>findByIdOptional(id)
                 .filter(f -> parishContext.canAccess(f.parish.id))
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Family not found.",
-                        "Family with id " + id + " not found."));
+                        "Família não encontrada.",
+                        "Família não encontrada com id " + id));
 
         family.delete();
     }

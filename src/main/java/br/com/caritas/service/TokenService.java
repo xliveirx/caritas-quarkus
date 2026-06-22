@@ -70,8 +70,8 @@ public class TokenService {
 
             if (!REFRESH_TYPE.equals(jwt.getClaim(CLAIM_TOKEN_TYPE))) {
                 throw new AuthException(
-                        "Invalid token.",
-                        "Token type not allowed."
+                        "Token inválido.",
+                        "Tipo de token inválido."
                 );
             }
 
@@ -79,15 +79,15 @@ public class TokenService {
                             "email = ?1 and active = ?2", jwt.getSubject(), Boolean.TRUE)
                     .firstResultOptional()
                     .orElseThrow(() -> new AuthException(
-                            "User not found.",
-                            "User with email " + jwt.getSubject() + " not found"));
+                            "Usuário não encontrado.",
+                            "Usuário não encontrado com e-mail " + jwt.getSubject()));
 
             return generateToken(user);
 
         } catch (ParseException e) {
             throw new AuthException(
-                    "Invalid token.",
-                    "Try to login again."
+                    "Token inválido.",
+                    "Tente logar novamente."
             );
         }
     }

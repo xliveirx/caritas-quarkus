@@ -15,8 +15,8 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
 @ApplicationScoped
@@ -34,13 +34,13 @@ public class AuthService {
         UserEntity user = UserEntity.<UserEntity>find("email = ?1 and active = ?2", req.email(), Boolean.TRUE)
                 .firstResultOptional()
                 .orElseThrow(() -> new AuthException(
-                        "Authentication error.",
-                        "Password or e-mail is incorrect."));
+                        "Erro de autenticação.",
+                        "Senha ou e-mail incorretos."));
 
         if(!BcryptUtil.matches(req.password(), user.password)){
             throw new AuthException(
-                    "Authentication error.",
-                    "Password or e-mail is incorrect.");
+                    "Erro de autenticação.",
+                    "Senha ou e-mail incorretos.");
         }
 
         String token = this.tokenService.generateToken(user);
@@ -56,30 +56,30 @@ public class AuthService {
                 "email = ?1", req.email())
                         .firstResultOptional()
                                 .orElseThrow(() -> new ResourceNotFoundException(
-                                        "User not found.",
-                                        "User not found with email " + req.email()
+                                        "Usuário não encontrado.",
+                                        "Usuário não encontrado com e-mail " + req.email()
                                 ));
 
-        if(user.resetToken == null) throw new BusinessRuleException("Invalid token", "The token is invalid or expired");
+        if(user.resetToken == null) throw new BusinessRuleException("Token inválido.", "O token é inválido ou já expirou.");
 
         if(!BcryptUtil.matches(req.token(), user.resetToken)) {
             throw new AuthException(
-                    "Invalid token.",
-                    "The token informed is invalid."
+                    "Token inválido.",
+                    "O token é inválido ou já expirou."
             );
         }
 
-        if(user.resetTokenExpiresAt.isBefore(LocalDateTime.now(ZoneOffset.UTC))) {
+        if(user.resetTokenExpiresAt.isBefore(Instant.now())) {
             throw new AuthException(
-                    "Invalid token.",
-                    "The token has expired."
+                    "Token inválido.",
+                    "O token já expirou."
             );
         }
 
         if(!req.password().equals(req.confirmPassword())) {
             throw new BusinessRuleException(
-                    "Passwords mismatch.",
-                    "The passwords informed don't match."
+                    "Erro de senha.",
+                    "As senhas informadas não coincidem."
             );
         }
 
@@ -97,12 +97,12 @@ public class AuthService {
                         "email = ?1 and password IS NULL", email)
                 .firstResultOptional()
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "User not found.",
-                        "User not found with email " + email));
+                        "Usuário não encontrado.",
+                        "Usuário não encontrado com e-mail " + email));
 
         String token = UUID.randomUUID().toString();
         user.resetToken = BcryptUtil.bcryptHash(token);
-        user.resetTokenExpiresAt = LocalDateTime.now(ZoneOffset.UTC).plusMinutes(15);
+        user.resetTokenExpiresAt = Instant.now().plus(15, ChronoUnit.MINUTES);
         user.persist();
 
         String parishName = resolveParishName(user);
@@ -129,13 +129,13 @@ public class AuthService {
                         "email = ?1 and active =?2", req.email(), Boolean.TRUE)
                 .firstResultOptional()
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "User not found.",
-                        "User not found with email " + req.email()
+                        "Usuário não encontrado.",
+                        "Usuário não encontrado com e-mail " + req.email()
                 ));
 
         String token = UUID.randomUUID().toString();
         user.resetToken = BcryptUtil.bcryptHash(token);
-        user.resetTokenExpiresAt = LocalDateTime.now(ZoneOffset.UTC).plusMinutes(15);
+        user.resetTokenExpiresAt = Instant.now().plus(15, ChronoUnit.MINUTES);
         user.persist();
 
         this.emailService.sendResetPasswordEmail(

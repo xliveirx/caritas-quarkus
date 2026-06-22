@@ -88,8 +88,8 @@ public class VisitService {
         FamilyEntity family = FamilyEntity.<FamilyEntity>findByIdOptional(req.familyId())
                 .filter(f -> parishContext.canAccess(f.parish.id))
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Family not found.",
-                        "Family not found with id: " + req.familyId()
+                        "Família não encontrada.",
+                        "Família não encontrada com id " + req.familyId()
                 ));
 
         visit.family = family;
@@ -97,8 +97,8 @@ public class VisitService {
 
         UserEntity user = UserEntity.<UserEntity>findByIdOptional(req.userId())
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "User not found.",
-                        "User not found with id: " + req.userId()
+                        "Usuário não encontrado.",
+                        "Usuário não encontrado com id " + req.userId()
                 ));
 
         visit.user = user;
@@ -113,8 +113,8 @@ public class VisitService {
         VisitEntity visit = VisitEntity.<VisitEntity>find("id = ?1 and status = ?2", id, VisitStatus.SCHEDULED)
                 .firstResultOptional()
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Visit not found.",
-                        "Visit not found with id: " + id
+                        "Visita não encontrada.",
+                        "Visita não encontrada com id " + id
                 ));
 
         parishContext.requireSameParish(visit.parish.id);
@@ -132,8 +132,8 @@ public class VisitService {
                     "id = ?1 and active = ?2", req.userId(), Boolean.TRUE)
                     .firstResultOptional()
                     .orElseThrow(() -> new ResourceNotFoundException(
-                            "User not found.",
-                            "User not found with id: " + req.userId()
+                            "Usuário não encontrado.",
+                            "Usuário não encontrado com id " + req.userId()
                     ));
             visit.user = user;
         }
@@ -148,8 +148,8 @@ public class VisitService {
         VisitEntity visit = VisitEntity.<VisitEntity>find("id = ?1 and status = ?2", id, VisitStatus.SCHEDULED)
                 .firstResultOptional()
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Visit not found.",
-                        "Visit not found with id: " + id
+                        "Visita não encontrada.",
+                        "Visita não encontrada com id " + id
                 ));
 
         parishContext.requireSameParish(visit.parish.id);

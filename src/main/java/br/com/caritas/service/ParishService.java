@@ -43,8 +43,8 @@ public class ParishService {
         ParishEntity parish = ParishEntity.<ParishEntity>find("id = ?1 and isDiocese = ?2", id, Boolean.FALSE)
                 .firstResultOptional()
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Parish not found.",
-                        "Parish with id " + id + " not found."));
+                        "Paróquia não encontrada.",
+                        "Paróquia não encontrada com id " + id));
 
 
         return ParishResponseDTO.fromEntity(parish);
@@ -67,8 +67,8 @@ public class ParishService {
 
         if(!CaritasUtil.isCnpjValid(req.cnpj())) {
             throw new BusinessRuleException(
-                    "CNPJ is invalid",
-                    "The informed format of the CNPJ is not valid.");
+                    "CNPJ inválido",
+                    "O CNPJ informado não é válido.");
         }
 
         parish.cnpj = req.cnpj();
@@ -91,8 +91,8 @@ public class ParishService {
         ParishEntity parish = ParishEntity.<ParishEntity>find("id = ?1 and isDiocese = ?2", id, Boolean.FALSE)
                 .firstResultOptional()
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Parish not found.",
-                        "Parish with id " + id + " not found."));
+                        "Paróquia não encontrada.",
+                        "Paróquia não encontrada com id " + id));
 
         if(req.name() != null) {
             parish.name = req.name();
@@ -118,8 +118,8 @@ public class ParishService {
 
         if(req.cnpj() != null && !CaritasUtil.isCnpjValid(req.cnpj())) {
             throw new BusinessRuleException(
-                    "CNPJ is invalid",
-                    "The informed format of the CNPJ is not valid.");
+                    "CNPJ inválido",
+                    "O CNPJ informado não é válido.");
         }
 
         if(req.cnpj() != null){
@@ -138,8 +138,8 @@ public class ParishService {
         ParishEntity parish = ParishEntity.<ParishEntity>find("id = ?1 and isDiocese = ?2", id, Boolean.FALSE)
                 .firstResultOptional()
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Parish not found.",
-                        "Parish with id " + id + " not found."));
+                        "Paróquia não encontrada.",
+                        "Paróquia não encontrada com id " + id));
 
         parish.delete();
     }

@@ -60,8 +60,8 @@ public class DonationEntryService {
                             "id = ?1 and active = ?2", batch.productId(), Boolean.TRUE)
                     .firstResultOptional()
                     .orElseThrow(() -> new ResourceNotFoundException(
-                            "Product not found.",
-                            "Product not found with id " + batch.productId()
+                            "Produto não encontrado.",
+                            "Produto não encontrado com id " + batch.productId()
                     ));
 
             EntryBatchEntity entry = new EntryBatchEntity();
@@ -99,8 +99,8 @@ public class DonationEntryService {
                 .firstResultOptional()
                 .filter(d -> parishContext.canAccess(d.parish.id))
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Donation not found.",
-                        "Donation not found with id " + id
+                        "Doação não encontrada.",
+                        "Doação não encontrada com id " + id
                 ));
 
         donation.batches.forEach(batch -> {
@@ -109,8 +109,8 @@ public class DonationEntryService {
                             "product.id = ?1 and parish.id = ?2", batch.product.id, donation.parish.id)
                     .firstResultOptional()
                     .orElseThrow(() -> new ResourceNotFoundException(
-                            "Stock item not found.",
-                            "Stock item not found with id " + batch.product.id
+                            "Item de estoque não encontrado.",
+                            "Item de estoque não encontrado com id " + batch.product.id
                     ));
 
             BigDecimal converted = UnitConverter.convert(batch.quantity, batch.unit, batch.product.defaultUnit);

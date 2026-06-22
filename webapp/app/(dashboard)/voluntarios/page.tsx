@@ -333,8 +333,8 @@ export default function VoluntariosPage() {
                             type="button"
                             aria-label={vol.active ? `Inativar ${vol.name}` : `Ativar ${vol.name}`}
                             onClick={() => setVolToToggle(vol)}
-                            disabled={togglingId === vol.id}
-                            title={vol.active ? 'Inativar' : 'Ativar'}
+                            disabled={togglingId === vol.id || (!vol.active && !vol.hasPassword)}
+                            title={vol.active ? 'Inativar' : vol.hasPassword ? 'Ativar' : 'Usuário sem senha definida'}
                             className={[
                               'p-1.5 rounded-lg transition-colors duration-150',
                               'focus:outline-none focus-visible:ring-2 focus-visible:ring-wine-700',

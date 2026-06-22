@@ -20,8 +20,8 @@ public class UserService {
         UserEntity user = UserEntity.<UserEntity>find("email = ?1 and active = ?2", email, Boolean.TRUE)
                 .firstResultOptional()
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "User not found.",
-                        "User not found with email " + email
+                        "Usuário não encontrado.",
+                        "Usuário não encontrado com e-mail " + email
                 ));
 
         return new UserResponseDTO(user.id, user.name, user.email);
@@ -35,8 +35,8 @@ public class UserService {
         UserEntity user = UserEntity.<UserEntity>find("email = ?1 and active = ?2", email, Boolean.TRUE)
                 .firstResultOptional()
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "User not found.",
-                        "User not found with email " + email
+                        "Usuário não encontrado.",
+                        "Usuário não encontrado com e-mail " + email
                 ));
 
         if(req.name() != null) {
@@ -45,7 +45,9 @@ public class UserService {
 
         if(req.password() != null && req.confirmPassword() != null) {
             if(!req.password().equals(req.confirmPassword())) {
-                throw new BusinessRuleException("Password mismatch.", "The passwords informed don't match.");
+                throw new BusinessRuleException(
+                        "Erro de senha.",
+                        "As senhas informadas não coincidem.");
             }
             user.password = BcryptUtil.bcryptHash(req.password());
         }

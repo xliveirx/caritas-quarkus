@@ -30,20 +30,20 @@ public class EmailService {
     public void init() throws IOException {
         try (var stream = getClass().getClassLoader().getResourceAsStream("/templates/welcome-email.html")) {
             if (stream == null) throw new ResourceNotFoundException(
-                    "Email template not found.",
-                    "Could not find welcome email template in resources/templates/welcome-email.html");
+                    "Template de e-mail não encontrado.",
+                    "Não foi possível encontrar um template em resources/templates/welcome-email.html");
             this.welcomeTemplate = new String(stream.readAllBytes(), StandardCharsets.UTF_8);
         }
         try (var stream = getClass().getClassLoader().getResourceAsStream("/templates/reset-password-email.html")) {
             if (stream == null) throw new ResourceNotFoundException(
-                    "Email template not found.",
-                    "Could not find reset-password email template in resources/templates/reset-password-email.html");
+                    "Template de e-mail não encontrado.",
+                    "Não foi possível encontrar um template em resources/templates/reset-password-email.html");
             this.resetPasswordTemplate = new String(stream.readAllBytes(), StandardCharsets.UTF_8);
         }
         try (var stream = getClass().getClassLoader().getResourceAsStream("/templates/visit-reminder-email.html")) {
             if (stream == null) throw new ResourceNotFoundException(
-                    "Email template not found.",
-                    "Could not find visit-reminder email template in resources/templates/visit-reminder-email.html");
+                    "Template de e-mail não encontrado.",
+                    "Não foi possível encontrar um template em resources/templates/visit-reminder-email.html");
             this.visitReminderTemplate = new String(stream.readAllBytes(), StandardCharsets.UTF_8);
         }
     }

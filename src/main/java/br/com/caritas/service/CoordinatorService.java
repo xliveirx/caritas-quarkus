@@ -16,8 +16,9 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
 import java.util.UUID;
 
@@ -49,8 +50,8 @@ public class CoordinatorService {
         var coordinator = CoordinatorEntity.<CoordinatorEntity>find("id = ?1 and active = ?2", id, Boolean.TRUE)
                 .firstResultOptional()
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Coordinator not found.",
-                        "Coordinator not found with id: " + id
+                        "Coordenador não encontrado.",
+                        "Coordenador não encontrado com id " + id
                 ));
 
         return CoordinatorResponseDTO.fromEntity(coordinator);
@@ -63,8 +64,8 @@ public class CoordinatorService {
                 .firstResultOptional()
                 .ifPresent(user -> {
                     throw new BusinessRuleException(
-                            "E-mail error.",
-                            "E-mail " + req.email() +  " has already been registered");
+                            "Erro de e-mail.",
+                            "E-mail " + req.email() +  " já existe no sistema.");
                 });
 
         CoordinatorEntity coordinator = new CoordinatorEntity();
@@ -73,13 +74,13 @@ public class CoordinatorService {
 
         String token = UUID.randomUUID().toString();
         coordinator.resetToken = BcryptUtil.bcryptHash(token);
-        coordinator.resetTokenExpiresAt = LocalDateTime.now(ZoneOffset.UTC).plusMinutes(15);
+        coordinator.resetTokenExpiresAt = Instant.now().plus(15, ChronoUnit.MINUTES);
 
         ParishEntity parish = ParishEntity.<ParishEntity>find("id = ?1 and isDiocese = ?2", req.parishId(), Boolean.FALSE)
                 .firstResultOptional()
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Parish not found.",
-                        "Parish not found with id " + req.parishId()));
+                        "Paróquia não encontrada.",
+                        "Paróquia não encontrada com id " + req.parishId()));
 
         coordinator.parish = parish;
 
@@ -103,8 +104,8 @@ public class CoordinatorService {
         CoordinatorEntity coordinator = CoordinatorEntity.<CoordinatorEntity>find("id = ?1 and active = ?2", id, Boolean.TRUE)
                 .firstResultOptional()
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "User not found.",
-                        "User with id " + id + " not found."));
+                        "Usuário não encontrado.",
+                        "Usuário não encontrado com id " + id));
 
         if(req.name() != null) {
             coordinator.name = req.name();
@@ -121,8 +122,8 @@ public class CoordinatorService {
         var coordinator = CoordinatorEntity.<CoordinatorEntity>find("id = ?1 and active = ?2", id, Boolean.TRUE)
                 .firstResultOptional()
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "User not found.",
-                        "User with id " + id + " not found."));
+                        "Usuário não encontrado.",
+                        "Usuário não encontrado com id " + id));
 
         coordinator.active = Boolean.FALSE;
         coordinator.updatedAt = LocalDateTime.now();
@@ -135,8 +136,8 @@ public class CoordinatorService {
                 "id = ?1 and active = ?2 and password is not null", id, Boolean.FALSE)
                 .firstResultOptional()
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "User not found.",
-                        "User with id " + id + " not found."));
+                        "Usuário não encontrado.",
+                        "Usuário não encontrado com id " + id));
 
         coordinator.active = Boolean.TRUE;
         coordinator.updatedAt = LocalDateTime.now();
